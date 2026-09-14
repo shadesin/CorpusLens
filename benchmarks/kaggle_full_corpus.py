@@ -31,15 +31,38 @@ NEAR_DEDUP_RECORDS = 100_000
 
 
 def _prepare_source(dataset_root: Path, working_root: Path) -> None:
-    """Unpack the pinned CorpusLens source snapshot and make it importable."""
+    """Make the pinned source snapshot importable from either Kaggle layout.
+
+    Kaggle commonly expands uploaded ZIP files into a directory, whereas local
+    reproduction receives ``corpuslens-source.zip`` unchanged. Supporting both
+    layouts keeps the benchmark deterministic without assuming a platform
+    implementation detail.
+    """
+    archive = dataset_root / "corpuslens-source.zip"
     source_root = working_root / "source"
-    shutil.unpack_archive(dataset_root / "corpuslens-source.zip", source_root)
+    if archive.is_file():
+        shutil.unpack_archive(archive, source_root)
+    else:
+        source_root = dataset_root / "corpuslens-source"
     sys.path.insert(0, str(source_root / "src"))
 
 
 def _write_json(value: object, path: Path) -> None:
     """Persist progress after every workload so partial evidence survives."""
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def _input_path(dataset_root: Path, compressed_name: str, extracted_name: str) -> Path:
+    """Find a corpus whether Kaggle kept or expanded its compressed upload."""
+    compressed = dataset_root / compressed_name
+    extracted = dataset_root / extracted_name
+    if compressed.is_file():
+        return compressed
+    if extracted.is_file():
+        return extracted
+    raise FileNotFoundError(
+        f"Could not find either {compressed_name!r} or {extracted_name!r} in {dataset_root}."
+    )
 
 
 def _run_workload(
@@ -104,8 +127,8 @@ def main() -> int:
     _write_json(summary, summary_path)
 
     corpora = (
-        ("bengali", dataset_root / "bengali_raw.txt.gz", "bn"),
-        ("nepali", dataset_root / "nepali_raw.txt.gz", "ne"),
+        ("bengali", _input_path(dataset_root, "bengali_raw.txt.gz", "bengali_raw.txt/bn.txt"), "bn"),
+        ("nepali", _input_path(dataset_root, "nepali_raw.txt.gz", "nepali_raw.txt/nebrahma.txt"), "ne"),
     )
     for language, input_path, profile_key in corpora:
         for suffix, near_dedup, max_records in (

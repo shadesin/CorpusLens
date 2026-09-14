@@ -24,6 +24,11 @@ shingle Jaccard similarity. The Kaggle output records the input size, decoded
 bytes, record counts, findings, dedup counters, throughput, configuration,
 reconciliation result, Python/runtime details, and process peak memory.
 
+The workloads use `analyze`, which executes the same normalization, heuristic,
+policy, and deduplication decisions as `clean` but does not write tens of
+gigabytes of accepted and rejected text into Kaggle's output volume. Clean-file
+generation is covered separately by the end-to-end test suite.
+
 Final Kaggle measurements will be added here from the generated JSON evidence;
 no result will be estimated or copied from the older Phase 1 pipeline.
 
