@@ -49,11 +49,21 @@ def write_html_report(report: dict[str, Any], path: Path) -> None:
     length_rows = _rows(report["length_statistics"])
     cards = []
     for code, examples in report["examples_by_code"].items():
-        items = "".join(
-            "<li><strong>Record " + str(example["record"]) + "</strong><pre>" + html.escape(example["text"]) + "</pre></li>"
-            for example in examples
-        )
-        cards.append(f"<section><h3>{html.escape(code)}</h3><ul>{items}</ul></section>")
+        items = []
+        for example in examples:
+            finding = example["finding"]
+            evidence = [f"action: {finding['action']}"]
+            if "value" in finding:
+                evidence.append(f"observed: {finding['value']}")
+            if "threshold" in finding:
+                evidence.append(f"threshold: {finding['threshold']}")
+            items.append(
+                "<li><strong>Record " + str(example["record"]) + "</strong>"
+                "<p>" + html.escape(finding["message"]) + "</p>"
+                "<p class=\"evidence\">" + html.escape(" · ".join(evidence)) + "</p>"
+                "<pre>" + html.escape(example["text"]) + "</pre></li>"
+            )
+        cards.append(f"<section><h3>{html.escape(code)}</h3><ul>{''.join(items)}</ul></section>")
     document = f"""<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CorpusLens report</title><style>
@@ -63,7 +73,7 @@ main{{max-width:1080px;margin:auto;padding:40px 20px}} h1{{margin-bottom:4px}} .
 .grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}} section{{background:var(--surface);border:1px solid #dfe4ea;border-radius:12px;padding:18px;margin:16px 0}}
 table{{width:100%;border-collapse:collapse}} td{{padding:7px;border-bottom:1px solid #edf0f3}} td:last-child{{text-align:right;font-variant-numeric:tabular-nums}}
 pre{{white-space:pre-wrap;background:#f7f8fb;border-radius:8px;padding:10px;max-height:180px;overflow:auto}} ul{{padding-left:20px}}
-.pass{{color:#087443;font-weight:700}} code{{color:var(--accent)}}
+.pass{{color:#087443;font-weight:700}} code{{color:var(--accent)}} .evidence{{color:var(--muted);font-size:13px;margin-top:-8px}}
 </style></head><body><main>
 <h1>CorpusLens report</h1><p class="lede">{html.escape(report['input_path'])} · profile <code>{html.escape(report['policy']['profile'])}</code></p>
 <div class="grid"><section><h2>Run summary</h2><table>{_rows(summary)}</table></section>

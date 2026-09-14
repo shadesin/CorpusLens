@@ -44,7 +44,9 @@ class PipelineTests(unittest.TestCase):
             self.assertIn("<EMAIL>", (output / "cleaned.txt").read_text(encoding="utf-8"))
             rejects = [json.loads(line) for line in (output / "rejected.jsonl").read_text(encoding="utf-8").splitlines()]
             self.assertTrue(any(any(item["code"] == "exact_duplicate" for item in row["findings"]) for row in rejects))
-            self.assertTrue((output / "report.html").is_file())
+            html_report = (output / "report.html").read_text(encoding="utf-8")
+            self.assertIn("The normalized record was seen earlier.", html_report)
+            self.assertIn("threshold: first_record", html_report)
             self.assertTrue((output / "resolved-policy.json").is_file())
 
     def test_invalid_jsonl_is_rejected_without_crashing(self):

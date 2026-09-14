@@ -10,7 +10,7 @@ from typing import Any
 
 from .models import Policy
 from .pipeline import run_pipeline
-from .profiles import ALIASES, PROFILES, get_profile
+from .profiles import ALIASES, PROFILES, LanguageProfile, get_profile
 from .readers import infer_format
 
 
@@ -27,7 +27,7 @@ def _load_config(path: Path | None) -> dict[str, Any]:
     return value
 
 
-def _policy(arguments: argparse.Namespace, config: dict[str, Any]) -> tuple[Policy, object]:
+def _policy(arguments: argparse.Namespace, config: dict[str, Any]) -> tuple[Policy, LanguageProfile]:
     """Resolve defaults, JSON configuration, and CLI overrides into a policy."""
     profile_name = arguments.profile or config.get("profile", "generic")
     profile = get_profile(profile_name)

@@ -144,7 +144,14 @@ decisions, but it does not write the large cleaned and rejected corpora.
 ### 4. Adjust and save the policy
 
 Start from `examples/bengali-policy.json` or copy the
-`resolved-policy.json` produced by the preview. Edit the JSON and analyze again:
+`resolved-policy.json` produced by the preview:
+
+```bash
+mkdir -p policies
+cp runs/nepali-preview/resolved-policy.json policies/nepali.json
+```
+
+Edit the copied JSON and analyze again:
 
 ```bash
 corpuslens analyze my-nepali-corpus.txt.gz \

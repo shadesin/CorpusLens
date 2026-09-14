@@ -10,6 +10,7 @@ import unicodedata
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from typing import Iterator
 
 
 class ExactDeduplicator:
@@ -118,7 +119,7 @@ def minhash_signature(hashes: set[int], permutations: int) -> tuple[int, ...]:
     return tuple(signature)
 
 
-def band_keys(signature: tuple[int, ...], rows: int):
+def band_keys(signature: tuple[int, ...], rows: int) -> Iterator[tuple[int, bytes]]:
     """Yield compact LSH bucket keys for consecutive signature bands."""
     for band, start in enumerate(range(0, len(signature), rows)):
         packed = struct.pack(f">{rows}Q", *signature[start:start + rows])

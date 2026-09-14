@@ -35,6 +35,7 @@ class LengthSketch:
         self.random = random.Random(0)
 
     def add(self, value: int) -> None:
+        """Add a record length while retaining at most ``limit`` samples."""
         self.count += 1
         self.total += value
         self.minimum = value if self.minimum is None else min(self.minimum, value)
@@ -48,6 +49,7 @@ class LengthSketch:
                 self.values[slot] = value
 
     def summary(self) -> dict[str, float | int]:
+        """Return exact aggregates and interpolated sample quantiles."""
         if not self.count:
             return {"count": 0}
         ordered = sorted(self.values)
@@ -74,6 +76,7 @@ class LengthSketch:
 
 
 def _ratio_bucket(ratio: float) -> str:
+    """Convert a ratio into a stable ten-percentage-point histogram label."""
     upper = min(100, (int(ratio * 10) + 1) * 10)
     lower = max(0, upper - 10)
     return f"{lower:02d}-{upper:02d}%"
