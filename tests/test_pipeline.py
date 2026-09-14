@@ -4,11 +4,22 @@ import unittest
 from pathlib import Path
 
 from corpuslens.models import Policy
-from corpuslens.pipeline import run_pipeline
+from corpuslens.pipeline import LengthSketch, run_pipeline
 from corpuslens.profiles import get_profile
 
 
 class PipelineTests(unittest.TestCase):
+    def test_length_sketch_is_bounded_and_reproducible(self):
+        first = LengthSketch(limit=10)
+        second = LengthSketch(limit=10)
+        for value in range(1000):
+            first.add(value)
+            second.add(value)
+        self.assertEqual(first.count, 1000)
+        self.assertEqual(len(first.values), 10)
+        self.assertEqual(first.values, second.values)
+        self.assertNotEqual(first.values, list(range(10)))
+
     def test_clean_reconciles_and_explains_rejections(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

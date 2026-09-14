@@ -49,16 +49,35 @@ def _policy(arguments: argparse.Namespace, config: dict[str, Any]) -> tuple[Poli
     if arguments.no_mask_pii:
         values["mask_pii"] = False
     policy = Policy(**values)
+    integer_fields = (
+        "min_characters", "max_characters", "repeated_character_run",
+        "consecutive_word_run", "sample_limit",
+    )
+    for name in integer_fields:
+        value = getattr(policy, name)
+        if isinstance(value, bool) or not isinstance(value, int):
+            raise ValueError(f"{name} must be an integer.")
+    for name in ("exact_dedup", "mask_pii"):
+        if not isinstance(getattr(policy, name), bool):
+            raise ValueError(f"{name} must be true or false.")
     if policy.min_characters < 0 or policy.max_characters < policy.min_characters:
         raise ValueError("Character thresholds are inconsistent.")
-    for name in ("min_script_ratio", "max_symbol_ratio"):
+    for name in (
+        "min_script_ratio", "max_symbol_ratio", "max_url_ratio",
+        "max_repeated_word_ratio", "min_unique_trigram_ratio",
+    ):
         value = getattr(policy, name)
-        if value is not None and not 0 <= value <= 1:
-            raise ValueError(f"{name} must be between 0 and 1.")
+        if value is not None:
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"{name} must be numeric.")
+            if not 0 <= value <= 1:
+                raise ValueError(f"{name} must be between 0 and 1.")
     if policy.low_script_action not in {"flag", "reject"}:
         raise ValueError("low_script_action must be 'flag' or 'reject'.")
     if policy.sample_limit < 0:
         raise ValueError("sample_limit cannot be negative.")
+    if policy.repeated_character_run < 2 or policy.consecutive_word_run < 2:
+        raise ValueError("Repetition run thresholds must be at least 2.")
     return policy, profile
 
 

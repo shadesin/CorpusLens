@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import random
 import tempfile
 import time
 import sys
@@ -26,6 +27,7 @@ class LengthSketch:
         self.minimum: int | None = None
         self.maximum: int | None = None
         self.total = 0
+        self.random = random.Random(0)
 
     def add(self, value: int) -> None:
         self.count += 1
@@ -35,8 +37,8 @@ class LengthSketch:
         if len(self.values) < self.limit:
             self.values.append(value)
         else:
-            # Deterministic systematic replacement keeps memory bounded and runs reproducible.
-            slot = (self.count * 2_654_435_761) % self.count
+            # Seeded reservoir sampling keeps memory bounded and reruns reproducible.
+            slot = self.random.randrange(self.count)
             if slot < self.limit:
                 self.values[slot] = value
 
