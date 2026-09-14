@@ -39,11 +39,17 @@ def _dataset_root() -> Path:
     """
     input_root = Path("/kaggle/input")
     preferred = input_root / DATASET_NAME
-    candidates = (preferred, *sorted(input_root.iterdir()))
-    for candidate in candidates:
-        if (candidate / "bengali_raw.txt" / "bn.txt").is_file() or (candidate / "bengali_raw.txt.gz").is_file():
-            return candidate
-    available = ", ".join(path.name for path in input_root.iterdir())
+    if (preferred / "bengali_raw.txt" / "bn.txt").is_file() or (preferred / "bengali_raw.txt.gz").is_file():
+        return preferred
+    # Some Kaggle runtimes put all attached datasets beneath an extra
+    # ``datasets/`` directory. Search filenames only; this walks directory
+    # metadata, not the multi-gigabyte corpus contents.
+    for extracted in input_root.rglob("bn.txt"):
+        if extracted.parent.name == "bengali_raw.txt":
+            return extracted.parent.parent
+    for compressed in input_root.rglob("bengali_raw.txt.gz"):
+        return compressed.parent
+    available = ", ".join(str(path.relative_to(input_root)) for path in input_root.rglob("*") if path.is_dir())
     raise FileNotFoundError(f"CorpusLens benchmark input was not mounted. Available inputs: {available}")
 
 
