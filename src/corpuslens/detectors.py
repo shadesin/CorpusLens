@@ -91,6 +91,19 @@ def inspect_text(text: str, profile: LanguageProfile, policy: Policy, source_err
     ratio = target_script_ratio(text, profile)
     if ratio is not None and policy.min_script_ratio is not None and ratio < policy.min_script_ratio:
         findings.append(Finding("low_target_script_ratio", policy.low_script_action, f"Too little text uses the expected {', '.join(profile.target_scripts)} script.", round(ratio, 4), policy.min_script_ratio))
+    if profile.target_scripts:
+        allowed_scripts = set(profile.target_scripts) | set(profile.allowed_secondary_scripts)
+        total_script_characters = sum(counts.values())
+        unexpected = sum(count for script, count in counts.items() if script not in allowed_scripts)
+        unexpected_ratio = unexpected / total_script_characters if total_script_characters else 0.0
+        if unexpected_ratio > policy.max_unexpected_script_ratio:
+            findings.append(Finding(
+                "unexpected_script_ratio",
+                "flag",
+                "Too much text uses scripts outside the profile's target and allowed-secondary scripts.",
+                round(unexpected_ratio, 4),
+                policy.max_unexpected_script_ratio,
+            ))
 
     ratio_symbols = symbol_ratio(text)
     if len(text) >= 50 and ratio_symbols > policy.max_symbol_ratio:

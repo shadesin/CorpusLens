@@ -8,7 +8,7 @@ from typing import Any
 
 from .models import Policy
 from .pipeline import run_pipeline
-from .profiles import get_profile
+from .profiles import ALIASES, PROFILES, get_profile
 from .readers import infer_format
 
 
@@ -40,6 +40,7 @@ def _policy(arguments: argparse.Namespace, config: dict[str, Any]) -> tuple[Poli
         "max_characters": arguments.max_characters,
         "min_script_ratio": arguments.min_script_ratio,
         "max_symbol_ratio": arguments.max_symbol_ratio,
+        "max_unexpected_script_ratio": arguments.max_unexpected_script_ratio,
         "sample_limit": arguments.sample_limit,
         "low_script_action": arguments.low_script_action,
     }
@@ -63,7 +64,7 @@ def _policy(arguments: argparse.Namespace, config: dict[str, Any]) -> tuple[Poli
     if policy.min_characters < 0 or policy.max_characters < policy.min_characters:
         raise ValueError("Character thresholds are inconsistent.")
     for name in (
-        "min_script_ratio", "max_symbol_ratio", "max_url_ratio",
+        "min_script_ratio", "max_symbol_ratio", "max_unexpected_script_ratio", "max_url_ratio",
         "max_repeated_word_ratio", "min_unique_trigram_ratio",
     ):
         value = getattr(policy, name)
@@ -85,19 +86,25 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="corpuslens", description="Audit text-corpus cleaning decisions before trusting them.")
     parser.add_argument("--version", action="version", version="CorpusLens 0.1.0")
     subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers.add_parser("profiles", help="List available language/script profiles.")
     for command in ("analyze", "clean"):
         child = subparsers.add_parser(command, help=("Report findings without writing a cleaned corpus." if command == "analyze" else "Apply a policy and write cleaned/rejected records."))
         child.add_argument("input", type=Path)
         child.add_argument("--output-dir", type=Path, default=None)
         child.add_argument("--format", choices=("auto", "txt", "jsonl"), default="auto")
         child.add_argument("--text-field", default="text", help="Text field for JSONL input.")
-        child.add_argument("--profile", help="generic, bn/bengali, ne/nepali, hi, en, or ja")
+        child.add_argument(
+            "--profile",
+            choices=sorted(set(PROFILES) | set(ALIASES)),
+            help="Language/script profile. Run `corpuslens profiles` to list them.",
+        )
         child.add_argument("--config", type=Path, help="JSON policy file. CLI options override it.")
         child.add_argument("--min-characters", type=int)
         child.add_argument("--max-characters", type=int)
         child.add_argument("--min-script-ratio", type=float)
         child.add_argument("--low-script-action", choices=("flag", "reject"), help="Flag by default; reject only when explicitly requested.")
         child.add_argument("--max-symbol-ratio", type=float)
+        child.add_argument("--max-unexpected-script-ratio", type=float)
         child.add_argument("--sample-limit", type=int)
         child.add_argument("--max-records", type=int, help="Stop after this many records; useful for a fast preview.")
         child.add_argument("--no-dedup", action="store_true")
@@ -109,6 +116,11 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
+    if arguments.command == "profiles":
+        for key, profile in PROFILES.items():
+            scripts = ", ".join(profile.target_scripts) or "unrestricted"
+            print(f"{key:8} {profile.name:20} {scripts}")
+        return 0
     try:
         if not arguments.input.is_file():
             raise ValueError(f"Input file does not exist: {arguments.input}")

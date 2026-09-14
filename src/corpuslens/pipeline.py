@@ -90,7 +90,17 @@ def run_pipeline(
     show_progress: bool = False,
 ) -> RunResult:
     output_dir.mkdir(parents=True, exist_ok=True)
-    result = RunResult(command=command, input_path=str(input_path), input_format=input_format, policy=policy.to_dict())
+    result = RunResult(
+        command=command,
+        input_path=str(input_path),
+        input_format=input_format,
+        policy=policy.to_dict(),
+        profile_details={
+            "name": profile.name,
+            "target_scripts": list(profile.target_scripts),
+            "allowed_secondary_scripts": list(profile.allowed_secondary_scripts),
+        },
+    )
     findings_count: Counter[str] = Counter()
     action_count: Counter[str] = Counter()
     scripts: Counter[str] = Counter()

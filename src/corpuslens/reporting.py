@@ -32,6 +32,11 @@ def write_html_report(report: dict[str, Any], path: Path) -> None:
         threshold: f"{details['records_below']} records ({details['percentage']}%)"
         for threshold, details in report["script_threshold_preview"].items()
     }
+    profile_details = {
+        "Name": report["profile_details"]["name"],
+        "Target scripts": ", ".join(report["profile_details"]["target_scripts"]) or "unrestricted",
+        "Allowed secondary": ", ".join(report["profile_details"]["allowed_secondary_scripts"]) or "none",
+    }
     length_rows = _rows(report["length_statistics"])
     cards = []
     for code, examples in report["examples_by_code"].items():
@@ -53,6 +58,7 @@ pre{{white-space:pre-wrap;background:#f7f8fb;border-radius:8px;padding:10px;max-
 </style></head><body><main>
 <h1>CorpusLens report</h1><p class="lede">{html.escape(report['input_path'])} · profile <code>{html.escape(report['policy']['profile'])}</code></p>
 <div class="grid"><section><h2>Run summary</h2><table>{_rows(summary)}</table></section>
+<section><h2>Profile</h2><table>{_rows(profile_details)}</table></section>
 <section><h2>Findings</h2><table>{finding_rows}</table></section>
 <section><h2>Scripts observed</h2><table>{script_rows}</table></section>
 <section><h2>Target-script ratio</h2><table>{ratio_rows}</table></section>

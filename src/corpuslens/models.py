@@ -35,6 +35,7 @@ class Policy:
     max_characters: int = 100_000
     min_script_ratio: float | None = None
     low_script_action: Action = "flag"
+    max_unexpected_script_ratio: float = 0.10
     max_symbol_ratio: float = 0.40
     max_url_ratio: float = 0.30
     repeated_character_run: int = 15
@@ -55,6 +56,7 @@ class RunResult:
     input_path: str
     input_format: str
     policy: dict[str, Any]
+    profile_details: dict[str, Any] = field(default_factory=dict)
     records_read: int = 0
     records_kept: int = 0
     records_transformed: int = 0

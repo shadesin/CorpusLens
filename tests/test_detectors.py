@@ -31,6 +31,44 @@ class DetectorTests(unittest.TestCase):
     def test_generic_profile_reports_non_latin_scripts(self):
         self.assertGreater(script_counts("தமிழ்")["Tamil"], 0)
 
+    def test_indic_profiles_recognize_their_scripts(self):
+        samples = {
+            "bn": "এটি একটি বাংলা বাক্য",
+            "gu": "આ ગુજરાતી લખાણ છે",
+            "hi": "यह हिन्दी वाक्य है",
+            "kn": "ಇದು ಕನ್ನಡ ಪಠ್ಯವಾಗಿದೆ",
+            "ml": "ഇത് മലയാളം വാചകമാണ്",
+            "mr": "हे मराठी वाक्य आहे",
+            "or": "ଏହା ଓଡ଼ିଆ ବାକ୍ୟ",
+            "pa": "ਇਹ ਪੰਜਾਬੀ ਵਾਕ ਹੈ",
+            "ta": "இது தமிழ் வாக்கியம்",
+            "te": "ఇది తెలుగు వాక్యం",
+            "ur": "یہ اردو جملہ ہے",
+            "as": "এইটো এটা অসমীয়া বাক্য",
+            "bho": "ई भोजपुरी वाक्य बा",
+            "brx": "बेयो बर राव",
+            "doi": "एह् डोगरी वाक्य ऐ",
+            "kok": "हें कोंकणी वाक्य आसा",
+            "mai": "ई मैथिली वाक्य अछि",
+            "mni": "ꯃꯤꯇꯩ ꯂꯣꯟ",
+            "lus": "Hei hi Mizo tawng a ni",
+            "ne": "यो नेपाली वाक्य हो",
+            "sd": "هي سنڌي جملو آهي",
+        }
+        for key, text in samples.items():
+            with self.subTest(profile=key):
+                self.assertGreater(target_script_ratio(text, get_profile(key)), 0.80)
+
+    def test_unexpected_script_is_flagged_separately(self):
+        findings, _, _ = inspect_text(
+            "यह पूरा वाक्य देवनागरी में है",
+            get_profile("bn"),
+            Policy(profile="bn", min_script_ratio=0.20),
+        )
+        codes = {finding.code for finding in findings}
+        self.assertIn("low_target_script_ratio", codes)
+        self.assertIn("unexpected_script_ratio", codes)
+
 
 if __name__ == "__main__":
     unittest.main()

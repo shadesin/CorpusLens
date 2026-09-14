@@ -79,6 +79,7 @@ CorpusLens refuses to overwrite an earlier report unless `--force` is supplied.
 | Character, word, and n-gram repetition | Reject | Universal |
 | Exact duplicates after NFC normalization | Reject | Universal |
 | Low expected-script ratio | **Flag** | Profile-aware |
+| Unexpected-script contamination | **Flag** | Profile-aware |
 | Email and supported phone patterns | Transform/mask | Universal/profile-aware |
 
 Low expected-script ratio is deliberately a flag by default. Code-mixed text
@@ -100,22 +101,51 @@ Universal checks work without selecting a language:
 corpuslens analyze corpus.txt --profile generic
 ```
 
-Version 0.1 ships with profiles for Bengali (`bn`), Nepali (`ne`), Hindi
-(`hi`), English (`en`), and Japanese (`ja`). Profiles define expected scripts,
-permitted secondary scripts, default thresholds, local boilerplate, and phone
-patterns. The generic analyzer also reports several other Unicode scripts.
+List every installed profile with:
 
-CorpusLens intentionally reports **Bengali-script ratio**, not “probability
-that this is Bengali.” Bengali script detection cannot prove language, just as
-Devanagari alone cannot distinguish Nepali from Hindi.
+```bash
+corpuslens profiles
+```
 
-## Why not just use Hugging Face Datasets?
+Version 0.1 includes the following Indic profiles:
 
-Hugging Face Datasets is a useful ingestion and transformation layer.
-CorpusLens addresses a different question: *what did this cleaning policy
-remove, why, and can the decision be reproduced?*
+| Group | Languages |
+| --- | --- |
+| Widely represented | Bengali (`bn`), Gujarati (`gu`), Hindi (`hi`), Kannada (`kn`), Malayalam (`ml`), Marathi (`mr`), Odia (`or`), Punjabi (`pa`), Tamil (`ta`), Telugu (`te`), Urdu (`ur`) |
+| Lower-resource | Assamese (`as`), Bhojpuri (`bho`), Bodo (`brx`), Dogri (`doi`), Konkani (`kok`), Maithili (`mai`), Manipuri/Meitei (`mni`), Mizo (`lus`), Nepali (`ne`), Sindhi (`sd`) |
+| Additional Indic | Kashmiri (`ks`), Sanskrit (`sa`), Santali (`sat`) |
 
-It adds an opinionated audit layer:
+Profiles cover the scripts currently or historically relevant to these
+languages, including Bengali-Assamese, Devanagari, Gujarati, Gurmukhi, Odia,
+Tamil, Telugu, Kannada, Malayalam, Perso-Arabic, Meetei Mayek, Ol Chiki,
+Kaithi, Tirhuta, Takri, and Khudawadi. Generic, English, and Japanese profiles
+are also available.
+
+“Profile support” means script-aware measurements, configurable thresholds,
+and appropriate defaults. It does not mean that CorpusLens can distinguish
+languages sharing a script or judge their semantic quality.
+
+CorpusLens intentionally reports **target-script ratio**, not “language
+probability.” Bengali script detection cannot distinguish Bengali from
+Assamese, Devanagari cannot distinguish Hindi from Nepali or Bhojpuri, and a
+Latin-script profile cannot distinguish Mizo from English. Optional language
+identification can be added later as a separate signal.
+
+## Why build another corpus cleaner?
+
+Corpus-cleaning libraries and applications already exist. CorpusLens was not
+built because filtering, deduplication, or Unicode analysis had never been
+implemented before. It was built after preparing Bengali and Nepali training
+corpora exposed a repeated workflow problem.
+
+The available building blocks still left the researcher to join together
+language-specific scripts, choose thresholds without seeing their consequences,
+inspect rejected text manually, and reconstruct later why a record disappeared.
+That burden is especially visible for lower-resource languages, where a default
+developed for English—or even another language using the same script—can remove
+valuable data without producing an obvious software error.
+
+CorpusLens concentrates on that decision gap:
 
 - every applicable finding is retained rather than only the first match;
 - `analyze` is separated from the destructive cleaning decision;
@@ -126,7 +156,11 @@ It adds an opinionated audit layer:
 - exact deduplication is disk-backed rather than an unbounded Python set; and
 - every run verifies `input = kept + rejected`.
 
-Hugging Face dataset ingestion is a planned adapter, not a competing goal.
+The aim is not to replace every existing cleaning framework. It is to provide a
+small, local, audit-first layer for researchers who otherwise end up with a
+directory of one-off scripts and no reliable account of what those scripts
+removed. Adapters for other dataset ecosystems can be added without changing
+that purpose.
 
 ## Architecture
 
