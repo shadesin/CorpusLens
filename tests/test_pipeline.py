@@ -1,3 +1,4 @@
+import gzip
 import json
 import tempfile
 import unittest
@@ -37,6 +38,8 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(result.records_read, result.records_kept + result.records_rejected)
             self.assertTrue(result.reconciliation_ok)
             self.assertEqual(result.findings_by_code["exact_duplicate"], 1)
+            self.assertEqual(result.deduplication_statistics["exact_documents_indexed"], 2)
+            self.assertEqual(result.deduplication_statistics["exact_duplicates_removed"], 1)
             self.assertIn("0.20", result.script_threshold_preview)
             self.assertIn("<EMAIL>", (output / "cleaned.txt").read_text(encoding="utf-8"))
             rejects = [json.loads(line) for line in (output / "rejected.jsonl").read_text(encoding="utf-8").splitlines()]
@@ -64,6 +67,34 @@ class PipelineTests(unittest.TestCase):
             run_pipeline(source, output, "clean", "jsonl", "content", get_profile("generic"), Policy())
             cleaned = json.loads((output / "cleaned.jsonl").read_text(encoding="utf-8"))
             self.assertEqual(cleaned, {"id": 7, "content": "useful text"})
+
+    def test_gzip_jsonl_is_inferred_and_streamed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "input.jsonl.gz"
+            with gzip.open(source, "wt", encoding="utf-8") as handle:
+                handle.write('{"text": "useful compressed record"}\n')
+                handle.write('{"text": "another compressed record"}\n')
+            output = root / "out"
+            result = run_pipeline(
+                source,
+                output,
+                "analyze",
+                "jsonl",
+                "text",
+                get_profile("generic"),
+                Policy(),
+                work_dir=root / "temporary-indexes",
+            )
+            self.assertEqual(result.input_compression, "gzip")
+            self.assertEqual(result.source_file_bytes, source.stat().st_size)
+            self.assertEqual(result.bytes_read, len(
+                ('{"text": "useful compressed record"}\n'
+                 '{"text": "another compressed record"}\n').encode("utf-8")
+            ))
+            self.assertNotEqual(result.bytes_read, result.source_file_bytes)
+            self.assertEqual(result.records_read, 2)
+            self.assertTrue((root / "temporary-indexes").is_dir())
 
     def test_optional_near_deduplication_rejects_verified_match(self):
         with tempfile.TemporaryDirectory() as directory:

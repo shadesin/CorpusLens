@@ -1,3 +1,5 @@
+"""Shared data contracts passed between the CLI, detectors, and reports."""
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
@@ -9,6 +11,8 @@ Action = Literal["flag", "reject", "transform"]
 
 @dataclass(frozen=True)
 class Finding:
+    """One explainable signal produced by a detector for a single record."""
+
     code: str
     action: Action
     message: str
@@ -16,11 +20,14 @@ class Finding:
     threshold: int | float | str | None = None
 
     def to_dict(self) -> dict[str, Any]:
+        """Return a compact JSON-ready representation."""
         return {key: value for key, value in asdict(self).items() if value is not None}
 
 
 @dataclass(frozen=True)
 class Record:
+    """A decoded input record plus enough source context to audit it."""
+
     number: int
     text: str
     raw: str
@@ -30,6 +37,8 @@ class Record:
 
 @dataclass
 class Policy:
+    """Fully resolved cleaning thresholds and feature switches for one run."""
+
     profile: str = "generic"
     min_characters: int = 5
     max_characters: int = 100_000
@@ -53,15 +62,20 @@ class Policy:
     sample_limit: int = 5
 
     def to_dict(self) -> dict[str, Any]:
+        """Serialize every resolved value so a run can be reproduced."""
         return asdict(self)
 
 
 @dataclass
 class RunResult:
+    """Aggregate evidence written to both JSON and the human-readable report."""
+
     command: str
     input_path: str
     input_format: str
     policy: dict[str, Any]
+    input_compression: str = "none"
+    source_file_bytes: int = 0
     profile_details: dict[str, Any] = field(default_factory=dict)
     records_read: int = 0
     records_kept: int = 0
@@ -85,4 +99,5 @@ class RunResult:
     outputs: dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
+        """Convert nested dataclass state into JSON-ready built-in types."""
         return asdict(self)

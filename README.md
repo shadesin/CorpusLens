@@ -17,8 +17,8 @@ CorpusLens makes those decisions visible.
 CorpusLens has no runtime dependencies and requires Python 3.10 or newer.
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/corpuslens.git
-cd corpuslens
+git clone https://github.com/shadesin/CorpusLens.git
+cd CorpusLens
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e .

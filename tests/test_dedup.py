@@ -2,7 +2,23 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from corpuslens.dedup import NearDeduplicator, jaccard, shingle_hashes, word_tokens
+from corpuslens.dedup import ExactDeduplicator, NearDeduplicator, jaccard, shingle_hashes, word_tokens
+
+
+class ExactDeduplicationTests(unittest.TestCase):
+    def test_reports_indexed_and_duplicate_counts(self):
+        with tempfile.TemporaryDirectory() as directory:
+            deduplicator = ExactDeduplicator(Path(directory) / "exact.sqlite3")
+            try:
+                self.assertIsNone(deduplicator.observe("same normalized text", 1))
+                self.assertEqual(deduplicator.observe("same normalized text", 2), 1)
+                self.assertIsNone(deduplicator.observe("different text", 3))
+                self.assertEqual(
+                    deduplicator.statistics(),
+                    {"exact_documents_indexed": 2, "exact_duplicates_removed": 1},
+                )
+            finally:
+                deduplicator.close()
 
 
 class NearDeduplicationTests(unittest.TestCase):

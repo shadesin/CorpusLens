@@ -1,11 +1,13 @@
+"""Single-pass orchestration for corpus analysis and cleaning."""
+
 from __future__ import annotations
 
 import json
 import math
 import random
+import sys
 import tempfile
 import time
-import sys
 from collections import Counter
 from pathlib import Path
 
@@ -21,7 +23,7 @@ SCRIPT_THRESHOLDS = (0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90)
 
 
 class LengthSketch:
-    """Deterministic bounded sample used for approximate quantiles."""
+    """Track exact extrema/mean and bounded-memory approximate quantiles."""
 
     def __init__(self, limit: int = 20_000):
         self.limit = limit
@@ -88,13 +90,28 @@ def run_pipeline(
     max_records: int | None = None,
     overwrite: bool = False,
     show_progress: bool = False,
+    work_dir: Path | None = None,
 ) -> RunResult:
+    """Analyze or clean a corpus and write a reproducible evidence bundle.
+
+    Detection, policy decisions, and output writing intentionally happen in
+    one streaming pass. Stateful deduplicators only index records that have not
+    already been rejected, so junk cannot become the retained representative of
+    a later valid near-duplicate cluster.
+    """
     output_dir.mkdir(parents=True, exist_ok=True)
+    if work_dir is not None:
+        # SQLite indexes can be much larger than the reports. Let callers put
+        # this temporary state on a volume with enough free space.
+        work_dir.mkdir(parents=True, exist_ok=True)
+    input_compression = "gzip" if input_path.suffix.casefold() == ".gz" else "none"
     result = RunResult(
         command=command,
         input_path=str(input_path),
         input_format=input_format,
         policy=policy.to_dict(),
+        input_compression=input_compression,
+        source_file_bytes=input_path.stat().st_size,
         profile_details={
             "name": profile.name,
             "target_scripts": list(profile.target_scripts),
@@ -122,7 +139,7 @@ def run_pipeline(
     cleaned_handle = cleaned_path.open("w", encoding="utf-8") if command == "clean" else None
     rejected_handle = rejected_path.open("w", encoding="utf-8") if command == "clean" else None
 
-    with tempfile.TemporaryDirectory(prefix="corpuslens-") as temp_dir:
+    with tempfile.TemporaryDirectory(prefix="corpuslens-", dir=work_dir) as temp_dir:
         deduplicator = ExactDeduplicator(Path(temp_dir) / "exact.sqlite3") if policy.exact_dedup else None
         near_deduplicator = NearDeduplicator(
             Path(temp_dir) / "near.sqlite3",
@@ -140,10 +157,13 @@ def run_pipeline(
                 result.bytes_read += record.byte_length
                 if show_progress and result.records_read % 100_000 == 0:
                     elapsed = time.perf_counter() - started
-                    total_bytes = input_path.stat().st_size
-                    percentage = result.bytes_read / total_bytes * 100 if total_bytes else 100.0
                     rate = result.records_read / elapsed if elapsed else 0.0
-                    print(f"\r{percentage:5.1f}% | {result.records_read:,} records | {rate:,.0f} records/s", end="", file=sys.stderr, flush=True)
+                    if input_compression == "none":
+                        percentage = result.bytes_read / result.source_file_bytes * 100 if result.source_file_bytes else 100.0
+                        progress = f"{percentage:5.1f}%"
+                    else:
+                        progress = f"{result.bytes_read / (1024 * 1024):,.1f} MiB decoded"
+                    print(f"\r{progress} | {result.records_read:,} records | {rate:,.0f} records/s", end="", file=sys.stderr, flush=True)
                 normalized = normalize_text(record.text)
                 result.characters_read += len(normalized)
                 lengths.add(len(normalized))
@@ -208,12 +228,13 @@ def run_pipeline(
                     else:
                         cleaned_handle.write(output_text + "\n")
         finally:
-            if deduplicator is not None:
-                deduplicator.close()
             result.deduplication_statistics = {
                 "exact_dedup_enabled": int(policy.exact_dedup),
                 "near_dedup_enabled": int(policy.near_dedup),
             }
+            if deduplicator is not None:
+                result.deduplication_statistics.update(deduplicator.statistics())
+                deduplicator.close()
             if near_deduplicator is not None:
                 result.deduplication_statistics.update(near_deduplicator.statistics())
                 near_deduplicator.close()

@@ -1,3 +1,5 @@
+"""Language profiles and Unicode script ranges used by profile-aware checks."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -6,10 +8,13 @@ from functools import lru_cache
 
 @dataclass(frozen=True)
 class ScriptRange:
+    """One named script represented by inclusive Unicode code-point ranges."""
+
     name: str
     ranges: tuple[tuple[int, int], ...]
 
     def contains(self, character: str) -> bool:
+        """Return whether a character belongs to one of this script's ranges."""
         point = ord(character)
         return any(start <= point <= end for start, end in self.ranges)
 
@@ -47,6 +52,8 @@ SCRIPTS: dict[str, ScriptRange] = {
 
 @dataclass(frozen=True)
 class LanguageProfile:
+    """Script expectations and localized patterns for a corpus language."""
+
     key: str
     name: str
     target_scripts: tuple[str, ...] = ()
@@ -84,6 +91,7 @@ def _indic_profile(
     phone_patterns: tuple[str, ...] = INDIA_PHONE_PATTERNS,
     boilerplate: tuple[str, ...] = (),
 ) -> LanguageProfile:
+    """Create an Indic profile with conservative, review-first defaults."""
     return LanguageProfile(
         key,
         name,
@@ -152,6 +160,7 @@ ALIASES = {
 
 
 def get_profile(name: str) -> LanguageProfile:
+    """Resolve a profile key or human-readable alias."""
     key = ALIASES.get(name.casefold(), name.casefold())
     if key not in PROFILES:
         choices = ", ".join(sorted(PROFILES))
@@ -161,6 +170,7 @@ def get_profile(name: str) -> LanguageProfile:
 
 @lru_cache(maxsize=8192)
 def character_script(character: str) -> str:
+    """Classify one character, caching the result for corpus-scale scans."""
     for name, script in SCRIPTS.items():
         if script.contains(character):
             return name

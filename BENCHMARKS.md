@@ -4,6 +4,29 @@ These numbers are validation evidence, not a universal performance claim.
 Runtime depends on record length, storage, enabled detectors, and SQLite
 performance.
 
+## Full-corpus Kaggle methodology
+
+The repository includes `benchmarks/kaggle_full_corpus.py`, the script used for
+the final private Kaggle run on the raw Phase 1 Bengali and Nepali corpora from
+Backup Plus. It produces four independently labeled workloads:
+
+| Workload | Input coverage | Deduplication |
+| --- | --- | --- |
+| Bengali full exact | Every raw record | Disk-backed SHA-256 exact dedup |
+| Nepali full exact | Every raw record | Disk-backed SHA-256 exact dedup |
+| Bengali near sample | First 100,000 raw records | Exact + MinHash/LSH near dedup |
+| Nepali near sample | First 100,000 raw records | Exact + MinHash/LSH near dedup |
+
+The near-dedup workloads are intentionally not described as full-corpus runs.
+They store shingles and LSH buckets and perform much more CPU and disk work per
+record. LSH only proposes candidates; every removal is verified using exact
+shingle Jaccard similarity. The Kaggle output records the input size, decoded
+bytes, record counts, findings, dedup counters, throughput, configuration,
+reconciliation result, Python/runtime details, and process peak memory.
+
+Final Kaggle measurements will be added here from the generated JSON evidence;
+no result will be estimated or copied from the older Phase 1 pipeline.
+
 ## Nepali Phase 1 pilot
 
 - Input: 100,000 newline-delimited records from the project's real Nepali pilot

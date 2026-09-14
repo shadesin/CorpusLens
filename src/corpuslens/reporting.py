@@ -1,3 +1,5 @@
+"""Writers for the machine-readable manifest and portable HTML report."""
+
 from __future__ import annotations
 
 import html
@@ -7,20 +9,26 @@ from typing import Any
 
 
 def write_json_report(report: dict[str, Any], path: Path) -> None:
+    """Write stable, readable UTF-8 JSON with non-ASCII text preserved."""
     path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 def _rows(mapping: dict[str, Any]) -> str:
+    """Escape a mapping into two-column HTML table rows."""
     return "".join(f"<tr><td>{html.escape(str(key))}</td><td>{html.escape(str(value))}</td></tr>" for key, value in mapping.items())
 
 
 def write_html_report(report: dict[str, Any], path: Path) -> None:
+    """Write a dependency-free report that can be opened or shared offline."""
     summary = {
         "Records read": report["records_read"],
         "Would keep / kept": report["records_kept"],
         "Would reject / rejected": report["records_rejected"],
         "Transformed": report["records_transformed"],
         "Characters": report["characters_read"],
+        "Input compression": report["input_compression"],
+        "Source file bytes": report["source_file_bytes"],
+        "Decoded bytes": report["bytes_read"],
         "Elapsed seconds": report["elapsed_seconds"],
         "Records/second": report["throughput_records_per_second"],
         "Reconciliation": "PASS" if report["reconciliation_ok"] else "FAIL",

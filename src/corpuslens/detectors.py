@@ -1,3 +1,5 @@
+"""Transparent normalization and quality signals applied to every record."""
+
 from __future__ import annotations
 
 import re
@@ -15,10 +17,16 @@ WORD_RE = re.compile(r"\S+")
 
 
 def normalize_text(text: str) -> str:
+    """Apply NFC and collapse all whitespace runs to a single ASCII space."""
     return " ".join(unicodedata.normalize("NFC", text).split())
 
 
 def script_counts(text: str) -> Counter[str]:
+    """Count Unicode letters and combining marks by script.
+
+    Marks must be counted with letters: many Indic vowel signs are category
+    ``M`` and treating them as symbols would incorrectly penalize normal text.
+    """
     counts: Counter[str] = Counter()
     for character in text:
         category = unicodedata.category(character)
@@ -29,6 +37,7 @@ def script_counts(text: str) -> Counter[str]:
 
 
 def target_script_ratio(text: str, profile: LanguageProfile) -> float | None:
+    """Measure target-script coverage; this is deliberately not language ID."""
     if not profile.target_scripts:
         return None
     counts = script_counts(text)
@@ -39,6 +48,7 @@ def target_script_ratio(text: str, profile: LanguageProfile) -> float | None:
 
 
 def symbol_ratio(text: str) -> float:
+    """Return the fraction of non-space characters that are punctuation/symbols."""
     characters = [character for character in text if not character.isspace()]
     if not characters:
         return 0.0
@@ -47,6 +57,7 @@ def symbol_ratio(text: str) -> float:
 
 
 def repetition_findings(text: str, policy: Policy) -> list[Finding]:
+    """Detect character spam, consecutive words, and repeated word sequences."""
     findings: list[Finding] = []
     if len(text) >= 20:
         run_re = re.compile(rf"(.)\1{{{max(policy.repeated_character_run - 1, 1)},}}", re.DOTALL)
@@ -76,6 +87,12 @@ def repetition_findings(text: str, policy: Policy) -> list[Finding]:
 
 
 def inspect_text(text: str, profile: LanguageProfile, policy: Policy, source_error: str | None = None) -> tuple[list[Finding], dict[str, int], float | None]:
+    """Run all stateless detectors and retain every applicable finding.
+
+    This function intentionally does not stop after the first rejection. The
+    complete signal set makes aggregate reports stable and rejected examples
+    useful when a user tunes thresholds.
+    """
     findings: list[Finding] = []
     if source_error:
         findings.append(Finding("malformed_record", "reject", source_error))
@@ -129,6 +146,7 @@ def inspect_text(text: str, profile: LanguageProfile, policy: Policy, source_err
 
 
 def mask_pii(text: str, profile: LanguageProfile) -> tuple[str, int, int]:
+    """Replace supported email/phone patterns and return replacement counts."""
     masked, emails = EMAIL_RE.subn("<EMAIL>", text)
     phones = 0
     for pattern in profile.phone_patterns:

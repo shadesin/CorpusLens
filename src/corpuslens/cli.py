@@ -1,3 +1,5 @@
+"""Command-line interface and policy validation for CorpusLens."""
+
 from __future__ import annotations
 
 import argparse
@@ -13,6 +15,7 @@ from .readers import infer_format
 
 
 def _load_config(path: Path | None) -> dict[str, Any]:
+    """Load an optional policy object and turn parse failures into CLI errors."""
     if path is None:
         return {}
     try:
@@ -25,6 +28,7 @@ def _load_config(path: Path | None) -> dict[str, Any]:
 
 
 def _policy(arguments: argparse.Namespace, config: dict[str, Any]) -> tuple[Policy, object]:
+    """Resolve defaults, JSON configuration, and CLI overrides into a policy."""
     profile_name = arguments.profile or config.get("profile", "generic")
     profile = get_profile(profile_name)
     allowed = set(Policy.__dataclass_fields__) - {"profile"}
@@ -35,6 +39,8 @@ def _policy(arguments: argparse.Namespace, config: dict[str, Any]) -> tuple[Poli
     values["profile"] = profile.key
     if "min_script_ratio" not in values:
         values["min_script_ratio"] = profile.default_min_script_ratio
+    # Explicit command-line values have the highest precedence. ``None`` means
+    # the option was omitted and must not erase a value from the JSON policy.
     overrides = {
         "min_characters": arguments.min_characters,
         "max_characters": arguments.max_characters,
@@ -95,6 +101,7 @@ def _policy(arguments: argparse.Namespace, config: dict[str, Any]) -> tuple[Poli
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """Construct the public CLI shared by the console script and tests."""
     parser = argparse.ArgumentParser(prog="corpuslens", description="Audit text-corpus cleaning decisions before trusting them.")
     parser.add_argument("--version", action="version", version="CorpusLens 0.1.0")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -127,11 +134,17 @@ def build_parser() -> argparse.ArgumentParser:
         child.add_argument("--lsh-rows", type=int)
         child.add_argument("--max-lsh-candidates", type=int)
         child.add_argument("--no-mask-pii", action="store_true")
+        child.add_argument(
+            "--work-dir",
+            type=Path,
+            help="Parent directory for temporary SQLite indexes; choose a disk with ample free space.",
+        )
         child.add_argument("--force", action="store_true", help="Overwrite CorpusLens output files in the selected directory.")
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse arguments, execute one command, and return a shell exit status."""
     parser = build_parser()
     arguments = parser.parse_args(argv)
     if arguments.command == "profiles":
@@ -149,16 +162,17 @@ def main(argv: list[str] | None = None) -> int:
         input_format = infer_format(arguments.input, arguments.format)
         output_dir = arguments.output_dir or Path(f"corpuslens-{arguments.command}-report")
         result = run_pipeline(
-            arguments.input,
-            output_dir,
-            arguments.command,
-            input_format,
-            arguments.text_field,
-            profile,
-            policy,
-            arguments.max_records,
-            arguments.force,
-            True,
+            input_path=arguments.input,
+            output_dir=output_dir,
+            command=arguments.command,
+            input_format=input_format,
+            text_field=arguments.text_field,
+            profile=profile,
+            policy=policy,
+            max_records=arguments.max_records,
+            overwrite=arguments.force,
+            show_progress=True,
+            work_dir=arguments.work_dir,
         )
     except (OSError, TypeError, ValueError) as error:
         parser.exit(2, f"error: {error}\n")
