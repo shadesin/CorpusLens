@@ -81,10 +81,134 @@ corpuslens analyze dataset.jsonl --format jsonl --text-field content
 When cleaning JSONL, CorpusLens preserves the complete object and replaces only
 the configured text field with its normalized or masked value.
 
+Plain gzip compression is detected automatically, so `corpus.txt.gz`,
+`dataset.jsonl.gz`, and `dataset.ndjson.gz` can be read without first creating a
+large decompressed copy.
+
 Use `--max-records 100000` for a fast representative audit before scanning a
 large file.
 
 CorpusLens refuses to overwrite an earlier report unless `--force` is supplied.
+
+## Analyze your own corpus, step by step
+
+### 1. Check the record format
+
+CorpusLens treats one physical line as one record.
+
+- TXT input contains one text sample per line.
+- JSONL/NDJSON input contains one JSON object per line. Use `--text-field` when
+  the text is stored under a key other than `text`.
+- Either format may be gzip-compressed. The inner extension still determines
+  the format, for example `articles.jsonl.gz`.
+
+Pretty-printed JSON arrays and documents containing literal multi-line text are
+not newline-delimited corpora and need to be converted first. Invalid UTF-8 and
+malformed JSONL lines do not crash the scan: CorpusLens records them as rejected
+examples in the report.
+
+### 2. Choose a profile
+
+Run `corpuslens profiles` to list the installed profiles. Use the language key
+when one matches your data:
+
+```bash
+corpuslens analyze my-nepali-corpus.txt.gz --profile ne
+```
+
+Use `--profile generic` for an unsupported language or a deliberately
+multilingual corpus. Universal heuristics and deduplication still run; only the
+target-script measurement and localized phone patterns are omitted.
+
+### 3. Preview before processing everything
+
+Start with a representative prefix and a new output directory:
+
+```bash
+corpuslens analyze my-nepali-corpus.txt.gz \
+  --profile ne \
+  --max-records 100000 \
+  --output-dir runs/nepali-preview
+```
+
+Open `runs/nepali-preview/report.html`. Check the finding counts, length
+distribution, target-script threshold preview, and—most importantly—the
+representative text under each finding. Finding counts can be larger than the
+number rejected because CorpusLens deliberately keeps every applicable reason
+for a record.
+
+`analyze` applies the complete decision pipeline in dry-run form. Its “would
+keep” and “would reject” numbers include exact or enabled near-duplicate
+decisions, but it does not write the large cleaned and rejected corpora.
+
+### 4. Adjust and save the policy
+
+Start from `examples/bengali-policy.json` or copy the
+`resolved-policy.json` produced by the preview. Edit the JSON and analyze again:
+
+```bash
+corpuslens analyze my-nepali-corpus.txt.gz \
+  --config policies/nepali.json \
+  --output-dir runs/nepali-policy-check
+```
+
+Command-line options override values from the JSON file. Script-ratio findings
+are flags by default and therefore do not remove records. If reviewed examples
+show that a cutoff is appropriate, opt into rejection explicitly with
+`--low-script-action reject`.
+
+### 5. Run the complete audit
+
+Remove `--max-records` only after the preview looks sensible. Exact and near
+deduplication use temporary SQLite indexes. For a very large corpus, point them
+at a disk with sufficient free space:
+
+```bash
+corpuslens analyze my-nepali-corpus.txt.gz \
+  --config policies/nepali.json \
+  --work-dir /path/to/large-temporary-disk \
+  --output-dir runs/nepali-full-audit
+```
+
+The work directory contains temporary state only and is cleaned automatically
+after a successful run. Reports are written to `--output-dir`.
+
+### 6. Produce cleaned data
+
+Once the full report has been reviewed, change `analyze` to `clean` and use the
+same policy:
+
+```bash
+corpuslens clean my-nepali-corpus.txt.gz \
+  --config runs/nepali-full-audit/resolved-policy.json \
+  --work-dir /path/to/large-temporary-disk \
+  --output-dir runs/nepali-clean
+```
+
+Keep the report, resolved policy, and rejection log with the cleaned corpus.
+Together they answer how many records were removed, why they were removed, and
+which exact settings produced the result.
+
+## Frequently used options
+
+| Option | Purpose |
+| --- | --- |
+| `--format auto|txt|jsonl` | Override extension-based format detection |
+| `--text-field FIELD` | Select the string field in JSONL objects |
+| `--profile KEY` | Enable script-aware measurements and localized patterns |
+| `--config POLICY.json` | Load a reusable cleaning policy |
+| `--max-records N` | Audit only the first `N` records |
+| `--no-dedup` | Disable exact deduplication |
+| `--near-dedup` | Enable MinHash/LSH candidate search and verification |
+| `--near-duplicate-threshold 0.85` | Set exact shingle-Jaccard removal threshold |
+| `--work-dir PATH` | Place temporary SQLite indexes on a chosen disk |
+| `--force` | Replace CorpusLens-owned files in an existing output directory |
+
+Use `corpuslens analyze --help` for every threshold and LSH tuning option.
+Near deduplication is intentionally opt-in because it consumes considerably
+more CPU and temporary disk than exact hashing. For initial runs, keep the
+default LSH parameters and change only the verified Jaccard threshold after
+inspecting known pairs and false positives.
 
 ## What it detects
 
