@@ -1,0 +1,12 @@
+{
+  "profile": "bn",
+  "min_characters": 5,
+  "max_characters": 100000,
+  "min_script_ratio": 0.2,
+  "low_script_action": "flag",
+  "max_symbol_ratio": 0.4,
+  "max_url_ratio": 0.3,
+  "exact_dedup": true,
+  "mask_pii": true,
+  "sample_limit": 5
+}
