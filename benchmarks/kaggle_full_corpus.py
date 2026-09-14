@@ -30,6 +30,23 @@ DATASET_NAME = "corpuslens-full-corpus-benchmark"
 NEAR_DEDUP_RECORDS = 100_000
 
 
+def _dataset_root() -> Path:
+    """Locate the mounted input by contents instead of Kaggle's display slug.
+
+    Kaggle may derive a mount directory from a dataset title rather than its
+    API handle. Looking for the two known corpus paths is robust to that
+    presentation-layer rename while remaining strict about the required input.
+    """
+    input_root = Path("/kaggle/input")
+    preferred = input_root / DATASET_NAME
+    candidates = (preferred, *sorted(input_root.iterdir()))
+    for candidate in candidates:
+        if (candidate / "bengali_raw.txt" / "bn.txt").is_file() or (candidate / "bengali_raw.txt.gz").is_file():
+            return candidate
+    available = ", ".join(path.name for path in input_root.iterdir())
+    raise FileNotFoundError(f"CorpusLens benchmark input was not mounted. Available inputs: {available}")
+
+
 def _prepare_source(dataset_root: Path, working_root: Path) -> None:
     """Make the pinned source snapshot importable from either Kaggle layout.
 
@@ -107,7 +124,7 @@ def _run_workload(
 
 def main() -> int:
     """Locate Kaggle inputs, run all workloads sequentially, and save evidence."""
-    dataset_root = Path("/kaggle/input") / DATASET_NAME
+    dataset_root = _dataset_root()
     working_root = Path("/kaggle/working")
     result_root = working_root / "corpuslens-benchmark-results"
     index_root = working_root / "corpuslens-temporary-indexes"
