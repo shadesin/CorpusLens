@@ -120,6 +120,8 @@ It adds an opinionated audit layer:
 - every applicable finding is retained rather than only the first match;
 - `analyze` is separated from the destructive cleaning decision;
 - representative records make false positives inspectable;
+- threshold previews show how many records fall below several possible
+  target-script cutoffs before a user chooses one;
 - the resolved policy travels with the output;
 - exact deduplication is disk-backed rather than an unbounded Python set; and
 - every run verifies `input = kept + rejected`.
@@ -192,9 +194,8 @@ manifest reconciliation. The repeated code and manual threshold inspection
 revealed a broader product problem: corpus cleaning needed to be inspectable
 and reproducible, not just executable.
 
-See [DECISIONS.md](DECISIONS.md) for the main product and engineering choices,
-[AI_USAGE.md](AI_USAGE.md) for how AI was used during development, and
-[BENCHMARKS.md](BENCHMARKS.md) for a 100,000-record real-corpus run.
+See [DECISIONS.md](DECISIONS.md) for the main product and engineering choices
+and [BENCHMARKS.md](BENCHMARKS.md) for a 100,000-record real-corpus run.
 
 ## Current limitations
 

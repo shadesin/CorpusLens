@@ -17,6 +17,9 @@ from .readers import iter_records
 from .reporting import write_html_report, write_json_report
 
 
+SCRIPT_THRESHOLDS = (0.10, 0.20, 0.30, 0.40, 0.50, 0.60, 0.70, 0.80, 0.90)
+
+
 class LengthSketch:
     """Deterministic bounded sample used for approximate quantiles."""
 
@@ -92,6 +95,8 @@ def run_pipeline(
     action_count: Counter[str] = Counter()
     scripts: Counter[str] = Counter()
     ratio_buckets: Counter[str] = Counter()
+    threshold_counts: Counter[str] = Counter()
+    ratios_observed = 0
     examples: dict[str, list[dict[str, object]]] = {}
     lengths = LengthSketch()
     started = time.perf_counter()
@@ -127,7 +132,11 @@ def run_pipeline(
                 findings, record_scripts, script_ratio = inspect_text(normalized, profile, policy, record.source_error)
                 scripts.update(record_scripts)
                 if script_ratio is not None:
+                    ratios_observed += 1
                     ratio_buckets[_ratio_bucket(script_ratio)] += 1
+                    for threshold in SCRIPT_THRESHOLDS:
+                        if script_ratio < threshold:
+                            threshold_counts[f"{threshold:.2f}"] += 1
                 if deduplicator is not None and normalized and record.source_error is None:
                     first_record = deduplicator.observe(normalized, record.number)
                     if first_record is not None:
@@ -183,6 +192,13 @@ def run_pipeline(
     result.examples_by_code = examples
     result.script_totals = dict(scripts.most_common())
     result.script_ratio_buckets = dict(sorted(ratio_buckets.items()))
+    for threshold in SCRIPT_THRESHOLDS:
+        key = f"{threshold:.2f}"
+        count = threshold_counts[key]
+        result.script_threshold_preview[key] = {
+            "records_below": count,
+            "percentage": round(count / ratios_observed * 100, 3) if ratios_observed else 0.0,
+        }
     result.length_statistics = lengths.summary()
     result.elapsed_seconds = round(time.perf_counter() - started, 3)
     result.throughput_records_per_second = round(result.records_read / result.elapsed_seconds, 2) if result.elapsed_seconds else 0.0

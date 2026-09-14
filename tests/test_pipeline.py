@@ -37,6 +37,7 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(result.records_read, result.records_kept + result.records_rejected)
             self.assertTrue(result.reconciliation_ok)
             self.assertEqual(result.findings_by_code["exact_duplicate"], 1)
+            self.assertIn("0.20", result.script_threshold_preview)
             self.assertIn("<EMAIL>", (output / "cleaned.txt").read_text(encoding="utf-8"))
             rejects = [json.loads(line) for line in (output / "rejected.jsonl").read_text(encoding="utf-8").splitlines()]
             self.assertTrue(any(any(item["code"] == "exact_duplicate" for item in row["findings"]) for row in rejects))

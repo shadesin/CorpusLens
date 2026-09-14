@@ -28,6 +28,10 @@ def write_html_report(report: dict[str, Any], path: Path) -> None:
     finding_rows = _rows(report["findings_by_code"] or {"No findings": 0})
     script_rows = _rows(report["script_totals"] or {"No script letters observed": 0})
     ratio_rows = _rows(report["script_ratio_buckets"] or {"Not applicable": 0})
+    threshold_preview = {
+        threshold: f"{details['records_below']} records ({details['percentage']}%)"
+        for threshold, details in report["script_threshold_preview"].items()
+    }
     length_rows = _rows(report["length_statistics"])
     cards = []
     for code, examples in report["examples_by_code"].items():
@@ -52,6 +56,7 @@ pre{{white-space:pre-wrap;background:#f7f8fb;border-radius:8px;padding:10px;max-
 <section><h2>Findings</h2><table>{finding_rows}</table></section>
 <section><h2>Scripts observed</h2><table>{script_rows}</table></section>
 <section><h2>Target-script ratio</h2><table>{ratio_rows}</table></section>
+<section><h2>Threshold preview</h2><p class="lede">Records below each possible minimum; review examples before rejecting.</p><table>{_rows(threshold_preview or {'Not applicable': 0})}</table></section>
 <section><h2>Length distribution</h2><table>{length_rows}</table></section></div>
 <h2>Representative findings</h2>{''.join(cards) if cards else '<p>No findings were recorded.</p>'}
 </main></body></html>"""

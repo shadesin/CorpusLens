@@ -64,6 +64,7 @@ class RunResult:
     examples_by_code: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
     script_totals: dict[str, int] = field(default_factory=dict)
     script_ratio_buckets: dict[str, int] = field(default_factory=dict)
+    script_threshold_preview: dict[str, dict[str, int | float]] = field(default_factory=dict)
     length_statistics: dict[str, float | int] = field(default_factory=dict)
     characters_read: int = 0
     bytes_read: int = 0
