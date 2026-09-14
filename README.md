@@ -42,6 +42,25 @@ corpuslens clean examples/sample.txt \
   --output-dir corpuslens-clean-report
 ```
 
+Enable near-duplicate discovery when repeated documents differ only slightly:
+
+```bash
+corpuslens analyze corpus.txt \
+  --profile bn \
+  --near-dedup \
+  --near-duplicate-threshold 0.85
+```
+
+An inspectable near-duplicate pair is included for a quick demonstration:
+
+```bash
+corpuslens analyze examples/near-duplicates.txt --profile bn --near-dedup
+```
+
+Near deduplication is optional because it is more computationally expensive
+than exact hashing. Locality-sensitive hashing proposes likely pairs; CorpusLens
+then computes exact shingle Jaccard similarity before rejecting a record.
+
 The clean run creates:
 
 ```text
@@ -78,6 +97,7 @@ CorpusLens refuses to overwrite an earlier report unless `--force` is supplied.
 | URL-heavy text and boilerplate | Reject | Universal/profile-aware |
 | Character, word, and n-gram repetition | Reject | Universal |
 | Exact duplicates after NFC normalization | Reject | Universal |
+| Near duplicates using MinHash/LSH + exact Jaccard verification | Reject when enabled | Universal |
 | Low expected-script ratio | **Flag** | Profile-aware |
 | Unexpected-script contamination | **Flag** | Profile-aware |
 | Email and supported phone patterns | Transform/mask | Universal/profile-aware |
@@ -175,7 +195,8 @@ NFC + whitespace normalization
      │
      ├── universal detectors
      ├── language/script profile
-     └── SQLite-backed exact deduplication
+     ├── SQLite-backed exact deduplication
+     └── optional disk-backed MinHash/LSH near deduplication
      │
      ▼
 Policy: flag / transform / reject
@@ -202,6 +223,11 @@ Policies are ordinary JSON:
   "low_script_action": "flag",
   "max_symbol_ratio": 0.4,
   "exact_dedup": true,
+  "near_dedup": false,
+  "near_duplicate_threshold": 0.85,
+  "shingle_size": 3,
+  "lsh_bands": 8,
+  "lsh_rows": 4,
   "mask_pii": true
 }
 ```
@@ -236,8 +262,9 @@ and [BENCHMARKS.md](BENCHMARKS.md) for a 100,000-record real-corpus run.
 - Input records are newline-delimited TXT or JSONL; multi-line document formats
   need an adapter.
 - Script ratios are descriptive signals, not language identification.
-- Exact deduplication is implemented; semantic/near deduplication is not yet in
-  the productized pipeline.
+- Near deduplication uses probabilistic LSH candidate discovery, followed by
+  exact Jaccard verification. Candidate searches are bounded to avoid
+  pathological buckets, so the process can miss some near duplicates.
 - Quantiles are approximate after 20,000 records, although min, max, mean,
   counts, and reconciliation remain exact.
 - PII detection covers email plus profile-specific phone formats, not every

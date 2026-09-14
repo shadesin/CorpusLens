@@ -65,6 +65,49 @@ class PipelineTests(unittest.TestCase):
             cleaned = json.loads((output / "cleaned.jsonl").read_text(encoding="utf-8"))
             self.assertEqual(cleaned, {"id": 7, "content": "useful text"})
 
+    def test_optional_near_deduplication_rejects_verified_match(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "input.txt"
+            source.write_text(
+                "the quick brown fox jumps over the lazy dog today\n"
+                "the quick brown fox jumps over the lazy dog today!\n"
+                "corpus auditing explains every rejected record clearly\n",
+                encoding="utf-8",
+            )
+            result = run_pipeline(
+                source,
+                root / "out",
+                "analyze",
+                "txt",
+                "text",
+                get_profile("generic"),
+                Policy(near_dedup=True),
+            )
+            self.assertEqual(result.findings_by_code["near_duplicate"], 1)
+            self.assertEqual(result.records_kept, 2)
+            self.assertEqual(result.records_rejected, 1)
+            self.assertGreaterEqual(result.deduplication_statistics["near_candidate_comparisons"], 1)
+
+    def test_rejected_record_does_not_pollute_near_duplicate_index(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            words = "one two three four five six seven eight nine ten"
+            source = root / "input.txt"
+            source.write_text(("!" * 80) + words + "\n" + words + "\n", encoding="utf-8")
+            result = run_pipeline(
+                source,
+                root / "out",
+                "analyze",
+                "txt",
+                "text",
+                get_profile("generic"),
+                Policy(near_dedup=True),
+            )
+            self.assertEqual(result.records_rejected, 1)
+            self.assertEqual(result.records_kept, 1)
+            self.assertNotIn("near_duplicate", result.findings_by_code)
+
 
 if __name__ == "__main__":
     unittest.main()

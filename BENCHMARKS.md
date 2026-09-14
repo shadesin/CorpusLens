@@ -27,3 +27,18 @@ same input while preserving identical findings.
 
 The source corpus is not included in this repository. The small public fixture
 under `examples/` exercises the same end-to-end path.
+
+## Bengali near-deduplication validation
+
+- Input: 4,977 records from the real Bengali Phase 1 sample (4.13 MB)
+- Exact deduplication: enabled
+- Near deduplication: enabled at Jaccard `0.85`
+- LSH configuration: 32 MinHash values, 8 bands × 4 rows
+- Runtime: 2.28 seconds
+- LSH candidates verified with exact Jaccard: 4
+- Near duplicates found: 0 (the input was already deduplicated)
+- Reconciliation: passed
+
+Detection itself is covered by integration tests containing known near pairs;
+this already-cleaned sample validates that the optional stage operates on real
+Bengali text without inventing matches.

@@ -88,3 +88,22 @@ deterministic sample of at most 20,000 lengths.
 
 **Why:** Full retention recreates the memory-scaling problem that streaming is
 supposed to solve. Deterministic sampling keeps reruns comparable.
+
+## 9. LSH proposes; exact similarity decides
+
+**Decision:** Use MinHash banding to retrieve near-duplicate candidates, then
+calculate exact Jaccard similarity over the candidates' Unicode-aware shingles.
+
+**Rejected alternative:** Remove records merely because their LSH signatures
+share a bucket.
+
+**Why:** Locality-sensitive hashing is probabilistic and collisions are only
+evidence that a pair may be similar. Exact verification prevents an LSH bucket
+collision from becoming an unexplained destructive decision. Candidate
+shingles and LSH buckets are stored in SQLite so enabling near deduplication
+does not require the full index to fit in application memory.
+
+For scripts whose words are not separated by spaces, the tokenizer falls back
+to character shingles when there are too few word tokens. Candidate retrieval
+is capped per record to protect runtime from pathological high-frequency
+buckets; this makes possible false negatives an explicit scalability tradeoff.

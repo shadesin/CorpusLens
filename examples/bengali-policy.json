@@ -8,6 +8,12 @@
   "max_symbol_ratio": 0.4,
   "max_url_ratio": 0.3,
   "exact_dedup": true,
+  "near_dedup": false,
+  "near_duplicate_threshold": 0.85,
+  "shingle_size": 3,
+  "lsh_bands": 8,
+  "lsh_rows": 4,
+  "max_lsh_candidates": 1000,
   "mask_pii": true,
   "sample_limit": 5
 }

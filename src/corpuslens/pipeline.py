@@ -9,7 +9,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from .dedup import ExactDeduplicator
+from .dedup import ExactDeduplicator, NearDeduplicator
 from .detectors import inspect_text, mask_pii, normalize_text
 from .models import Finding, Policy, RunResult
 from .profiles import LanguageProfile
@@ -124,6 +124,14 @@ def run_pipeline(
 
     with tempfile.TemporaryDirectory(prefix="corpuslens-") as temp_dir:
         deduplicator = ExactDeduplicator(Path(temp_dir) / "exact.sqlite3") if policy.exact_dedup else None
+        near_deduplicator = NearDeduplicator(
+            Path(temp_dir) / "near.sqlite3",
+            threshold=policy.near_duplicate_threshold,
+            shingle_size=policy.shingle_size,
+            bands=policy.lsh_bands,
+            rows=policy.lsh_rows,
+            max_candidates=policy.max_lsh_candidates,
+        ) if policy.near_dedup else None
         try:
             for record in iter_records(input_path, input_format, text_field):
                 if max_records is not None and result.records_read >= max_records:
@@ -147,10 +155,22 @@ def run_pipeline(
                     for threshold in SCRIPT_THRESHOLDS:
                         if script_ratio < threshold:
                             threshold_counts[f"{threshold:.2f}"] += 1
-                if deduplicator is not None and normalized and record.source_error is None:
+                has_rejection = any(finding.action == "reject" for finding in findings)
+                if deduplicator is not None and normalized and record.source_error is None and not has_rejection:
                     first_record = deduplicator.observe(normalized, record.number)
                     if first_record is not None:
                         findings.append(Finding("exact_duplicate", "reject", "The normalized record was seen earlier.", first_record, "first_record"))
+                        has_rejection = True
+                if near_deduplicator is not None and normalized and record.source_error is None and not has_rejection:
+                    match = near_deduplicator.observe(normalized, record.number)
+                    if match is not None:
+                        findings.append(Finding(
+                            "near_duplicate",
+                            "reject",
+                            f"The record is near-duplicate of retained record {match.first_record}.",
+                            round(match.similarity, 4),
+                            policy.near_duplicate_threshold,
+                        ))
 
                 for finding in findings:
                     findings_count[finding.code] += 1
@@ -190,6 +210,13 @@ def run_pipeline(
         finally:
             if deduplicator is not None:
                 deduplicator.close()
+            result.deduplication_statistics = {
+                "exact_dedup_enabled": int(policy.exact_dedup),
+                "near_dedup_enabled": int(policy.near_dedup),
+            }
+            if near_deduplicator is not None:
+                result.deduplication_statistics.update(near_deduplicator.statistics())
+                near_deduplicator.close()
             if cleaned_handle is not None:
                 cleaned_handle.close()
             if rejected_handle is not None:

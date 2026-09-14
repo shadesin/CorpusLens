@@ -37,6 +37,7 @@ def write_html_report(report: dict[str, Any], path: Path) -> None:
         "Target scripts": ", ".join(report["profile_details"]["target_scripts"]) or "unrestricted",
         "Allowed secondary": ", ".join(report["profile_details"]["allowed_secondary_scripts"]) or "none",
     }
+    deduplication = report["deduplication_statistics"] or {"Deduplication": "disabled"}
     length_rows = _rows(report["length_statistics"])
     cards = []
     for code, examples in report["examples_by_code"].items():
@@ -63,6 +64,7 @@ pre{{white-space:pre-wrap;background:#f7f8fb;border-radius:8px;padding:10px;max-
 <section><h2>Scripts observed</h2><table>{script_rows}</table></section>
 <section><h2>Target-script ratio</h2><table>{ratio_rows}</table></section>
 <section><h2>Threshold preview</h2><p class="lede">Records below each possible minimum; review examples before rejecting.</p><table>{_rows(threshold_preview or {'Not applicable': 0})}</table></section>
+<section><h2>Deduplication</h2><table>{_rows(deduplication)}</table></section>
 <section><h2>Length distribution</h2><table>{length_rows}</table></section></div>
 <h2>Representative findings</h2>{''.join(cards) if cards else '<p>No findings were recorded.</p>'}
 </main></body></html>"""

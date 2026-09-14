@@ -43,6 +43,12 @@ class Policy:
     max_repeated_word_ratio: float = 0.70
     min_unique_trigram_ratio: float = 0.35
     exact_dedup: bool = True
+    near_dedup: bool = False
+    near_duplicate_threshold: float = 0.85
+    shingle_size: int = 3
+    lsh_bands: int = 8
+    lsh_rows: int = 4
+    max_lsh_candidates: int = 1_000
     mask_pii: bool = True
     sample_limit: int = 5
 
@@ -72,6 +78,7 @@ class RunResult:
     bytes_read: int = 0
     emails_masked: int = 0
     phone_numbers_masked: int = 0
+    deduplication_statistics: dict[str, int | float] = field(default_factory=dict)
     elapsed_seconds: float = 0.0
     throughput_records_per_second: float = 0.0
     reconciliation_ok: bool = False

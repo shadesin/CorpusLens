@@ -43,29 +43,37 @@ def _policy(arguments: argparse.Namespace, config: dict[str, Any]) -> tuple[Poli
         "max_unexpected_script_ratio": arguments.max_unexpected_script_ratio,
         "sample_limit": arguments.sample_limit,
         "low_script_action": arguments.low_script_action,
+        "near_duplicate_threshold": arguments.near_duplicate_threshold,
+        "shingle_size": arguments.shingle_size,
+        "lsh_bands": arguments.lsh_bands,
+        "lsh_rows": arguments.lsh_rows,
+        "max_lsh_candidates": arguments.max_lsh_candidates,
     }
     values.update({key: value for key, value in overrides.items() if value is not None})
     if arguments.no_dedup:
         values["exact_dedup"] = False
+    if arguments.near_dedup:
+        values["near_dedup"] = True
     if arguments.no_mask_pii:
         values["mask_pii"] = False
     policy = Policy(**values)
     integer_fields = (
         "min_characters", "max_characters", "repeated_character_run",
-        "consecutive_word_run", "sample_limit",
+        "consecutive_word_run", "sample_limit", "shingle_size", "lsh_bands",
+        "lsh_rows", "max_lsh_candidates",
     )
     for name in integer_fields:
         value = getattr(policy, name)
         if isinstance(value, bool) or not isinstance(value, int):
             raise ValueError(f"{name} must be an integer.")
-    for name in ("exact_dedup", "mask_pii"):
+    for name in ("exact_dedup", "near_dedup", "mask_pii"):
         if not isinstance(getattr(policy, name), bool):
             raise ValueError(f"{name} must be true or false.")
     if policy.min_characters < 0 or policy.max_characters < policy.min_characters:
         raise ValueError("Character thresholds are inconsistent.")
     for name in (
         "min_script_ratio", "max_symbol_ratio", "max_unexpected_script_ratio", "max_url_ratio",
-        "max_repeated_word_ratio", "min_unique_trigram_ratio",
+        "max_repeated_word_ratio", "min_unique_trigram_ratio", "near_duplicate_threshold",
     ):
         value = getattr(policy, name)
         if value is not None:
@@ -79,6 +87,10 @@ def _policy(arguments: argparse.Namespace, config: dict[str, Any]) -> tuple[Poli
         raise ValueError("sample_limit cannot be negative.")
     if policy.repeated_character_run < 2 or policy.consecutive_word_run < 2:
         raise ValueError("Repetition run thresholds must be at least 2.")
+    if min(policy.shingle_size, policy.lsh_bands, policy.lsh_rows, policy.max_lsh_candidates) < 1:
+        raise ValueError("Near-deduplication sizes must be positive.")
+    if policy.near_duplicate_threshold <= 0:
+        raise ValueError("near_duplicate_threshold must be greater than 0.")
     return policy, profile
 
 
@@ -108,6 +120,12 @@ def build_parser() -> argparse.ArgumentParser:
         child.add_argument("--sample-limit", type=int)
         child.add_argument("--max-records", type=int, help="Stop after this many records; useful for a fast preview.")
         child.add_argument("--no-dedup", action="store_true")
+        child.add_argument("--near-dedup", action="store_true", help="Enable MinHash/LSH near-deduplication.")
+        child.add_argument("--near-duplicate-threshold", type=float)
+        child.add_argument("--shingle-size", type=int)
+        child.add_argument("--lsh-bands", type=int)
+        child.add_argument("--lsh-rows", type=int)
+        child.add_argument("--max-lsh-candidates", type=int)
         child.add_argument("--no-mask-pii", action="store_true")
         child.add_argument("--force", action="store_true", help="Overwrite CorpusLens output files in the selected directory.")
     return parser
