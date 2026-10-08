@@ -10,6 +10,7 @@ import tempfile
 import time
 from collections import Counter
 from pathlib import Path
+from typing import Callable
 
 from .dedup import ExactDeduplicator, NearDeduplicator
 from .detectors import inspect_text, mask_pii, normalize_text
@@ -94,6 +95,7 @@ def run_pipeline(
     overwrite: bool = False,
     show_progress: bool = False,
     work_dir: Path | None = None,
+    progress_callback: Callable[[RunResult], None] | None = None,
 ) -> RunResult:
     """Analyze or clean a corpus and write a reproducible evidence bundle.
 
@@ -158,6 +160,10 @@ def run_pipeline(
                     break
                 result.records_read += 1
                 result.bytes_read += record.byte_length
+                if progress_callback is not None and result.records_read % 10_000 == 0:
+                    # The dashboard receives bounded periodic updates. Counts
+                    # may lag this record by one until the run completes.
+                    progress_callback(result)
                 if show_progress and result.records_read % 100_000 == 0:
                     elapsed = time.perf_counter() - started
                     rate = result.records_read / elapsed if elapsed else 0.0

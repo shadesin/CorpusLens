@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CorpusLens · Corpus workspace</title>
+  <style>
+    :root { color-scheme: light; --ink:#142134; --muted:#5c6c7c; --line:#dce5ed; --bg:#f4f7f8; --card:#fff; --accent:#286b73; --accent-dark:#174d54; --teal:#e3f4f1; --red:#ac4e43; --red-bg:#faeae7; --gold:#9c6e22; --gold-bg:#fff5dc; }
+    * { box-sizing:border-box; }
+    [hidden] { display:none !important; }
+    body { margin:0; color:var(--ink); background:var(--bg); font:15px/1.48 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    button,input,select { font:inherit; }
+    .shell { max-width:1380px; margin:auto; padding:32px 28px 72px; }
+    header { display:flex; align-items:flex-end; justify-content:space-between; gap:24px; margin-bottom:30px; }
+    .eyebrow { color:var(--accent); font-size:12px; font-weight:750; letter-spacing:.14em; text-transform:uppercase; }
+    h1 { margin:4px 0 2px; font-size:clamp(30px,3vw,42px); letter-spacing:-.045em; line-height:1.1; }
+    .subtitle { color:var(--muted); margin:6px 0 0; max-width:650px; }
+    .badge { border:1px solid #c8e1dc; background:var(--teal); color:var(--accent-dark); border-radius:999px; padding:7px 12px; white-space:nowrap; font-size:12px; font-weight:700; }
+    .layout { display:grid; grid-template-columns:minmax(320px,420px) minmax(0,1fr); align-items:start; gap:20px; }
+    .panel { border:1px solid var(--line); border-radius:18px; background:var(--card); box-shadow:0 6px 24px #20394b08; }
+    .setup { padding:24px; position:sticky; top:20px; }
+    .panel h2 { margin:0; font-size:19px; letter-spacing:-.02em; }
+    .helper { color:var(--muted); font-size:13px; margin:4px 0 19px; }
+    .field { display:block; margin:16px 0; }
+    .field > span, .group-title { display:block; margin:0 0 6px; font-size:12px; font-weight:750; letter-spacing:.02em; }
+    .field small { display:block; margin-top:5px; color:var(--muted); font-size:12px; }
+    .field input,.field select { width:100%; border:1px solid #cbd8e2; border-radius:9px; background:#fff; color:var(--ink); padding:10px 11px; outline:none; }
+    .field input:focus,.field select:focus { border-color:var(--accent); box-shadow:0 0 0 3px #2c7c831d; }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .rule { border:0; border-top:1px solid var(--line); margin:22px 0; }
+    details.settings { margin:18px 0; border:1px solid var(--line); border-radius:10px; padding:12px 14px; }
+    details.settings summary { cursor:pointer; font-weight:700; }
+    .checks { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin:13px 0 0; }
+    .checks label { display:flex; align-items:center; gap:7px; font-size:13px; }
+    .checks input { accent-color:var(--accent); }
+    .primary { width:100%; background:var(--accent); color:#fff; border:0; border-radius:10px; padding:12px 17px; cursor:pointer; font-weight:750; }
+    .primary:hover { background:var(--accent-dark); }
+    .primary:disabled { opacity:.55; cursor:not-allowed; }
+    .notice { margin:12px 0 0; color:var(--muted); font-size:12px; }
+    .notice.error { color:var(--red); background:var(--red-bg); padding:10px; border-radius:8px; }
+    .results { min-width:0; }
+    .empty { min-height:520px; display:flex; align-items:center; justify-content:center; flex-direction:column; text-align:center; padding:38px; }
+    .empty-icon { width:64px; height:64px; border-radius:20px; background:var(--teal); display:grid; place-items:center; font-size:30px; margin-bottom:18px; }
+    .empty p { max-width:380px; color:var(--muted); }
+    .run-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:22px 24px; }
+    .run-head p { color:var(--muted); font-size:13px; overflow-wrap:anywhere; margin:5px 0 0; }
+    .state-pill { border-radius:999px; padding:6px 11px; font-size:12px; font-weight:750; background:var(--gold-bg); color:var(--gold); white-space:nowrap; }
+    .state-pill.complete { background:var(--teal); color:var(--accent-dark); }
+    .state-pill.error { background:var(--red-bg); color:var(--red); }
+    .running { padding:0 24px 24px; }
+    .progress-track { height:9px; border-radius:99px; background:#e8eff2; overflow:hidden; }
+    .progress-fill { height:100%; width:0; background:var(--accent); transition:width .3s; }
+    .progress-copy { display:flex; justify-content:space-between; gap:12px; color:var(--muted); font-size:12px; margin-top:9px; }
+    .metric-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:16px 0; }
+    .metric { padding:17px 19px; }
+    .metric-label { display:block; color:var(--muted); font-size:12px; }
+    .metric strong { display:block; font-size:26px; letter-spacing:-.04em; margin-top:5px; }
+    .metric.keep strong { color:var(--accent-dark); }
+    .metric.reject strong { color:var(--red); }
+    .section { padding:22px 24px; margin-top:16px; }
+    .section-head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:12px; }
+    .section-head small { color:var(--muted); }
+    .bar-row { display:grid; grid-template-columns:minmax(120px,210px) 1fr auto; align-items:center; gap:12px; margin:11px 0; font-size:13px; }
+    .bar-label { overflow-wrap:anywhere; }
+    .bar-track { height:9px; background:#edf2f4; border-radius:99px; overflow:hidden; }
+    .bar-fill { height:100%; min-width:2px; background:#6da8a6; border-radius:99px; }
+    .bar-count { font-variant-numeric:tabular-nums; font-weight:700; }
+    .example { border-top:1px solid var(--line); padding:12px 0; }
+    .example:first-of-type { border-top:0; }
+    .example summary { cursor:pointer; display:flex; align-items:center; justify-content:space-between; gap:10px; font-weight:700; }
+    .example summary span:last-child { color:var(--muted); font-weight:500; font-size:12px; }
+    .example-list { list-style:none; padding:0; margin:11px 0 0; }
+    .example-list li { margin:10px 0; padding:12px; background:#f7f9fa; border-radius:9px; }
+    .example-list small { color:var(--muted); }
+    .example-list pre { white-space:pre-wrap; overflow-wrap:anywhere; max-height:180px; overflow:auto; margin:8px 0 0; font:13px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; }
+    .links { display:flex; gap:10px; flex-wrap:wrap; margin-top:15px; }
+    .links a { border:1px solid #bcd5d3; border-radius:8px; color:var(--accent-dark); background:var(--teal); text-decoration:none; padding:8px 11px; font-size:13px; font-weight:700; }
+    .path-box { background:#f7f9fa; border-radius:8px; padding:11px; margin:8px 0; font:12px/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; overflow-wrap:anywhere; }
+    .muted { color:var(--muted); }
+    @media (max-width:900px) { .layout { grid-template-columns:1fr; } .setup { position:static; } .empty { min-height:300px; } }
+    @media (max-width:560px) { .shell { padding:22px 14px 48px; } header { align-items:start; flex-direction:column; } .row,.checks { grid-template-columns:1fr; } .metric-grid { gap:7px; } .metric { padding:12px; } .metric strong { font-size:19px; } .bar-row { grid-template-columns:105px 1fr auto; gap:7px; } }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div><div class="eyebrow">CorpusLens / Workspace</div><h1>Know what your filter removes.</h1><p class="subtitle">Preview a policy on real corpus records, inspect the evidence, then run the complete audit or cleaning pipeline.</p></div>
+      <span class="badge">Local · files stay on this machine</span>
+    </header>
+    <div class="layout">
+      <form id="job-form" class="panel setup">
+        <h2>Set up a run</h2><p class="helper">One line is one record. Large files are read directly from disk.</p>
+        <label class="field"><span>Corpus file path</span><input id="input_path" required placeholder="/path/to/corpus.txt.gz" autocomplete="off"><small>TXT, JSONL, NDJSON, or their .gz variants</small></label>
+        <div class="row"><label class="field"><span>Language profile</span><select id="profile"></select></label><label class="field"><span>Input format</span><select id="format"><option value="auto">Auto detect</option><option value="txt">TXT</option><option value="jsonl">JSONL</option></select></label></div>
+        <label class="field"><span>JSONL text field</span><input id="text_field" value="text" autocomplete="off"></label>
+        <hr class="rule">
+        <label class="field"><span>What do you want to do?</span><select id="mode"><option value="preview">Preview first records</option><option value="analyze">Analyze entire corpus</option><option value="clean">Create cleaned corpus</option></select><small id="mode-help">Preview writes reports but no cleaned corpus.</small></label>
+        <label class="field" id="limit-field"><span>Preview record limit</span><input id="max_records" type="number" min="1" step="1" value="100000"></label>
+        <details class="settings"><summary>Cleaning policy</summary>
+          <div class="row"><label class="field"><span>Minimum characters</span><input id="min_characters" type="number" min="0" step="1" value="5"></label><label class="field"><span>Maximum characters</span><input id="max_characters" type="number" min="1" step="1" value="100000"></label></div>
+          <div class="row"><label class="field"><span>Minimum target script ratio</span><input id="min_script_ratio" type="number" min="0" max="1" step="0.01" placeholder="Profile default"></label><label class="field"><span>Low script ratio</span><select id="low_script_action"><option value="flag">Flag for review</option><option value="reject">Reject record</option></select></label></div>
+          <div class="row"><label class="field"><span>Maximum symbol ratio</span><input id="max_symbol_ratio" type="number" min="0" max="1" step="0.01" value="0.4"></label><label class="field"><span>Near duplicate threshold</span><input id="near_duplicate_threshold" type="number" min="0.01" max="1" step="0.01" value="0.85"></label></div>
+          <div class="checks"><label><input id="exact_dedup" type="checkbox" checked> Exact deduplication</label><label><input id="near_dedup" type="checkbox"> LSH near deduplication</label><label><input id="mask_pii" type="checkbox" checked> Mask email / phone</label></div>
+        </details>
+        <details class="settings"><summary>Storage options</summary><label class="field"><span>Temporary index directory</span><input id="work_dir" placeholder="System temporary directory" autocomplete="off"><small>For large files, choose a disk with free space for SQLite indexes.</small></label></details>
+        <button id="submit" class="primary" type="submit">Run preview</button>
+        <p id="form-message" class="notice">Start with a preview and review examples before cleaning.</p>
+      </form>
+      <div class="results">
+        <div id="empty" class="panel empty"><div class="empty-icon">◫</div><h2>Your corpus audit appears here</h2><p>Choose a local file and run a preview to see decisions, script coverage, duplicates, and representative records.</p></div>
+        <div id="run" hidden><div class="panel"><div class="run-head"><div><h2 id="run-title">Corpus run</h2><p id="run-path"></p></div><span id="run-state" class="state-pill">Running</span></div><div id="running" class="running"><div class="progress-track"><div id="progress-fill" class="progress-fill"></div></div><div class="progress-copy"><span id="progress-text">Starting…</span><span id="progress-rate"></span></div></div><div id="run-error" class="notice error" hidden></div></div>
+        <div id="metrics" class="metric-grid" hidden><div class="panel metric"><span class="metric-label">Records scanned</span><strong id="count-read">0</strong></div><div class="panel metric keep"><span class="metric-label">Would keep / kept</span><strong id="count-kept">0</strong></div><div class="panel metric reject"><span class="metric-label">Would reject / rejected</span><strong id="count-rejected">0</strong></div></div>
+        <section id="findings-section" class="panel section" hidden><div class="section-head"><h2>Why records were flagged</h2><small>One record can have several findings</small></div><div id="findings"></div></section>
+        <section id="script-section" class="panel section" hidden><div class="section-head"><h2>Script threshold preview</h2><small>Records below each possible minimum</small></div><div id="script-thresholds"></div></section>
+        <section id="examples-section" class="panel section" hidden><div class="section-head"><h2>Representative records</h2><small>Inspect before changing a rule</small></div><div id="examples"></div></section>
+        <section id="output-section" class="panel section" hidden><h2>Run files</h2><p class="helper">The resolved policy and full reports live beside any cleaned output.</p><div id="output-paths"></div><div class="links"><a href="/report" target="_blank" rel="noopener">Open full HTML report ↗</a></div></section>
+      </div>
+    </div>
+  </main>
+  <script>
+    const $ = id => document.getElementById(id);
+    const formatCount = value => Number(value || 0).toLocaleString();
+    const niceName = code => code.replaceAll('_', ' ');
+    let timer = null;
+
+    function showError(message) { $('form-message').textContent = message; $('form-message').className = 'notice error'; }
+    function clearError() { $('form-message').textContent = 'The dashboard reads the same policy as the CLI.'; $('form-message').className = 'notice'; }
+    function setMode() {
+      const mode = $('mode').value;
+      $('limit-field').hidden = mode !== 'preview';
+      $('submit').textContent = mode === 'preview' ? 'Run preview' : mode === 'analyze' ? 'Analyze full corpus' : 'Create cleaned corpus';
+      $('mode-help').textContent = mode === 'preview' ? 'Preview writes reports but no cleaned corpus.' : mode === 'analyze' ? 'Scans every record and writes reports; no cleaned corpus.' : 'Scans every record and writes cleaned and rejected files.';
+    }
+    function payload() {
+      const data = {};
+      for (const id of ['input_path','profile','format','text_field','mode','low_script_action','work_dir']) data[id] = $(id).value;
+      for (const id of ['min_characters','max_characters','min_script_ratio','max_symbol_ratio','near_duplicate_threshold','max_records']) {
+        if ($(id).value !== '') data[id] = Number($(id).value);
+      }
+      for (const id of ['exact_dedup','near_dedup','mask_pii']) data[id] = $(id).checked;
+      return data;
+    }
+    function bar(container, label, value, max, annotation) {
+      const row = document.createElement('div'); row.className = 'bar-row';
+      const name = document.createElement('span'); name.className = 'bar-label'; name.textContent = label;
+      const track = document.createElement('div'); track.className = 'bar-track';
+      const fill = document.createElement('div'); fill.className = 'bar-fill'; fill.style.width = `${max ? Math.max(1, value / max * 100) : 0}%`; track.append(fill);
+      const count = document.createElement('span'); count.className = 'bar-count'; count.textContent = annotation;
+      row.append(name, track, count); container.append(row);
+    }
+    function renderReport(report) {
+      $('findings').replaceChildren();
+      const findings = Object.entries(report.findings_by_code || {});
+      if (!findings.length) $('findings').textContent = 'No findings in this run.';
+      const maxFinding = Math.max(1, ...findings.map(([, count]) => count));
+      for (const [code, count] of findings) bar($('findings'), niceName(code), count, maxFinding, formatCount(count));
+      $('findings-section').hidden = false;
+
+      $('script-thresholds').replaceChildren();
+      const thresholds = Object.entries(report.script_threshold_preview || {});
+      if (!report.profile_details.target_scripts.length) $('script-thresholds').textContent = 'Choose a language profile to see target-script thresholds.';
+      else for (const [threshold, item] of thresholds) bar($('script-thresholds'), `${Math.round(Number(threshold) * 100)}% minimum`, item.records_below, Math.max(1, report.records_read), `${formatCount(item.records_below)} · ${item.percentage}%`);
+      $('script-section').hidden = false;
+
+      $('examples').replaceChildren();
+      const groups = Object.entries(report.examples_by_code || {});
+      if (!groups.length) $('examples').textContent = 'No example findings in this run.';
+      for (const [code, examples] of groups) {
+        const group = document.createElement('details'); group.className = 'example';
+        const summary = document.createElement('summary'); const name = document.createElement('span'); name.textContent = niceName(code);
+        const tally = document.createElement('span'); tally.textContent = `${formatCount(report.findings_by_code[code] || 0)} findings · ${examples.length} shown`; summary.append(name,tally); group.append(summary);
+        const list = document.createElement('ul'); list.className = 'example-list';
+        for (const example of examples) {
+          const item = document.createElement('li'); const meta = document.createElement('small');
+          meta.textContent = `Record ${formatCount(example.record)} · ${example.finding.action} · ${example.finding.message}`;
+          const pre = document.createElement('pre'); pre.textContent = example.text || '(empty record)'; item.append(meta,pre); list.append(item);
+        }
+        group.append(list); $('examples').append(group);
+      }
+      $('examples-section').hidden = false;
+
+      $('output-paths').replaceChildren();
+      for (const [kind, path] of Object.entries(report.outputs || {})) {
+        const entry = document.createElement('div'); entry.className = 'path-box'; entry.textContent = `${niceName(kind)}: ${path}`; $('output-paths').append(entry);
+      }
+      $('output-section').hidden = false;
+      const links = $('output-section').querySelector('.links');
+      links.querySelectorAll('[data-output-link]').forEach(link => link.remove());
+      for (const [kind, label] of [['json_report','Download JSON report'],['resolved_policy','Download policy'],['cleaned_corpus','Download cleaned corpus'],['rejected_records','Download rejection log']]) {
+        if (!report.outputs[kind]) continue;
+        const link = document.createElement('a'); link.href = `/download/${kind}`; link.textContent = label; link.dataset.outputLink = 'true'; links.append(link);
+      }
+      $('progress-rate').textContent = `${formatCount(report.throughput_records_per_second)} records/s · ${report.elapsed_seconds}s`;
+    }
+    function render(state) {
+      if (!state || state.status === 'idle') return;
+      $('empty').hidden = true; $('run').hidden = false; $('metrics').hidden = false;
+      $('run-title').textContent = state.mode === 'preview' ? 'Preview' : state.mode === 'analyze' ? 'Full audit' : 'Clean run';
+      $('run-path').textContent = state.input_path || '';
+      $('run-state').textContent = state.status === 'running' ? 'Running' : state.status === 'complete' ? 'Complete' : 'Error';
+      $('run-state').className = `state-pill ${state.status}`;
+      $('count-read').textContent = formatCount(state.records_read);
+      $('count-kept').textContent = formatCount(state.records_kept);
+      $('count-rejected').textContent = formatCount(state.records_rejected);
+      $('submit').disabled = state.status === 'running';
+      $('run-error').hidden = state.status !== 'error';
+      if (state.status === 'error') $('run-error').textContent = state.error || 'The run failed.';
+      $('running').hidden = state.status === 'error';
+      const isGzip = state.input_compression === 'gzip';
+      const fraction = !isGzip && state.source_file_bytes ? Math.min(100, state.bytes_read / state.source_file_bytes * 100) : 0;
+      $('progress-fill').style.width = `${state.status === 'complete' ? 100 : fraction}%`;
+      $('progress-text').textContent = state.status === 'complete' ? 'Run finished · reconciliation ' + (state.report.reconciliation_ok ? 'passed' : 'failed') : isGzip ? `${formatCount(state.records_read)} records · ${formatCount((state.bytes_read / 1048576).toFixed(1))} MiB decoded` : `${formatCount(state.records_read)} records · ${fraction.toFixed(1)}% of file`;
+      if (state.status === 'complete') renderReport(state.report);
+    }
+    async function refresh() {
+      try {
+        const response = await fetch('/api/status', {cache:'no-store'});
+        const state = await response.json(); render(state);
+        if (state.status === 'running') timer = setTimeout(refresh, 1000);
+      } catch (error) { showError(`Cannot reach the local dashboard: ${error.message}`); }
+    }
+    $('mode').addEventListener('change', setMode);
+    $('job-form').addEventListener('submit', async event => {
+      event.preventDefault(); clearError();
+      const data = payload();
+      if (data.mode === 'clean' && !confirm('Create cleaned and rejected files for the entire corpus using these settings?')) return;
+      $('submit').disabled = true;
+      try {
+        const response = await fetch('/api/start', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+        const state = await response.json();
+        if (!response.ok) throw new Error(state.error || 'Could not start the run.');
+        for (const id of ['findings-section','script-section','examples-section','output-section']) $(id).hidden = true;
+        clearTimeout(timer); render(state); timer = setTimeout(refresh, 300);
+      } catch (error) { $('submit').disabled = false; showError(error.message); }
+    });
+    async function init() {
+      try {
+        const meta = await (await fetch('/api/meta')).json();
+        for (const profile of meta.profiles) { const option = document.createElement('option'); option.value = profile.key; option.textContent = `${profile.name} (${profile.key})`; $('profile').append(option); }
+        $('profile').value = 'generic'; setMode(); refresh();
+      } catch (error) { showError(`Cannot initialize the dashboard: ${error.message}`); }
+    }
+    init();
+  </script>
+</body>
+</html>

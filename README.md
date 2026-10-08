@@ -90,6 +90,42 @@ large file.
 
 CorpusLens refuses to overwrite an earlier report unless `--force` is supplied.
 
+## Local dashboard
+
+If you prefer to review and tune a policy in a browser, start the dashboard:
+
+```bash
+corpuslens dashboard
+```
+
+Open the printed URL, normally `http://127.0.0.1:8765/`. Enter the **absolute
+path** to a corpus file on the same machine, choose a language profile, and
+run a preview. The dashboard accepts TXT, JSONL, NDJSON, and gzip-compressed
+versions of those formats. It reads the file directly from disk, so a large
+corpus does not have to be uploaded through the browser.
+
+The preview scans the first 100,000 physical records by default. It shows
+keep/reject counts, findings, target-script threshold effects, and examples of
+flagged records. Adjust the length, script, symbol, or deduplication settings
+and preview again. Choose **Analyze entire corpus** for a full report or
+**Create cleaned corpus** to write accepted records and a rejection log. These
+actions use the same pipeline and resolved-policy format as the CLI.
+
+Each run gets its own directory under `corpuslens-dashboard-runs/`, containing
+the report and resolved policy; clean runs also contain `cleaned.txt` or
+`cleaned.jsonl` and `rejected.jsonl`. The dashboard shows those paths and offers
+downloads for the generated files. To put reports elsewhere or move temporary
+SQLite indexes to a disk with more free space, use:
+
+```bash
+corpuslens dashboard --output-root /path/to/reports --port 8765
+```
+
+Then fill in **Temporary index directory** under Storage options for large
+runs. The dashboard listens only on this computer, runs one corpus job at a
+time, and requires its terminal process to stay open until the job finishes.
+Press Ctrl+C when you are done.
+
 ## Analyze your own corpus, step by step
 
 ### 1. Check the record format

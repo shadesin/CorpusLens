@@ -106,6 +106,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version="CorpusLens 0.1.0")
     subparsers = parser.add_subparsers(dest="command", required=True)
     subparsers.add_parser("profiles", help="List available language/script profiles.")
+    dashboard = subparsers.add_parser("dashboard", help="Open a local dashboard for previewing and cleaning corpora.")
+    dashboard.add_argument("--port", type=int, default=8765, help="Local HTTP port (default: 8765).")
+    dashboard.add_argument("--output-root", type=Path, default=Path("corpuslens-dashboard-runs"))
     for command in ("analyze", "clean"):
         child = subparsers.add_parser(command, help=("Report findings without writing a cleaned corpus." if command == "analyze" else "Apply a policy and write cleaned/rejected records."))
         child.add_argument("input", type=Path)
@@ -151,6 +154,16 @@ def main(argv: list[str] | None = None) -> int:
         for key, profile in PROFILES.items():
             scripts = ", ".join(profile.target_scripts) or "unrestricted"
             print(f"{key:8} {profile.name:20} {scripts}")
+        return 0
+    if arguments.command == "dashboard":
+        if not 0 <= arguments.port <= 65535:
+            parser.exit(2, "error: --port must be between 0 and 65535.\n")
+        from .dashboard import serve_dashboard
+
+        try:
+            serve_dashboard(arguments.port, arguments.output_root)
+        except OSError as error:
+            parser.exit(2, f"error: {error}\n")
         return 0
     try:
         if not arguments.input.is_file():
