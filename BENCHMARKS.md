@@ -29,8 +29,40 @@ policy, and deduplication decisions as `clean` but does not write tens of
 gigabytes of accepted and rejected text into Kaggle's output volume. Clean-file
 generation is covered separately by the end-to-end test suite.
 
-Final Kaggle measurements will be added here from the generated JSON evidence;
-no result will be estimated or copied from the older Phase 1 pipeline.
+### Completed Kaggle measurements
+
+All four workloads completed on Kaggle Linux with Python 3.12.13 and four
+logical CPUs. The private input dataset was
+`hailbipbap/corpuslens-full-corpus-benchmark`; the [private benchmark kernel](https://www.kaggle.com/code/hailbipbap/corpuslens-bengali-nepali-benchmark)
+finished with no reported workload errors. These figures come from its
+`benchmark-summary.json` and individual `report.json` files.
+
+| Workload | Records read | Kept | Rejected | Exact duplicates | Verified near duplicates | Runtime | Throughput |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Bengali full exact | 41,004,792 | 19,342,812 | 21,661,980 | 1,115,568 | Not enabled | 15,729.6 s (4 h 22 m) | 2,606.85 records/s |
+| Bengali near sample | 100,000 | 49,428 | 50,572 | 450 | 5 | 84.2 s | 1,187.76 records/s |
+| Nepali full exact | 20,321,968 | 20,315,247 | 6,721 | 3,966 | Not enabled | 19,631.8 s (5 h 27 m) | 1,035.16 records/s |
+| Nepali near sample | 100,000 | 99,980 | 20 | 0 | 2 | 132.5 s | 754.79 records/s |
+
+The full Bengali scan read 15,992,871,652 bytes. Its raw file contained
+20,502,396 empty physical lines, accounting for most rejections; the first
+100,000-line near-dedup sample therefore contained only 50,000 nonempty
+records. The full Nepali scan read 25,430,815,636 bytes. Every workload passed
+the `records_read = records_kept + records_rejected` reconciliation check.
+
+For the near-dedup samples, LSH proposed candidates and CorpusLens verified
+them with exact shingle Jaccard at threshold `0.85`. It made 272 candidate
+comparisons for Bengali and 122 for Nepali before removing 5 and 2 near
+duplicates respectively. The samples are file prefixes, not random or
+representative samples, and these counts must not be extrapolated to the
+complete corpora.
+
+The recorded process peak resident memory was 48.38 MiB. This measures the
+Python process high-water mark across sequential workloads; it excludes the
+temporary SQLite indexes, filesystem cache, and Kaggle's other processes.
+Disk use was not measured. The raw corpora remain private because their
+upstream usage conditions differ; the public repository contains the runner
+and aggregate measurements only.
 
 ## Nepali Phase 1 pilot
 

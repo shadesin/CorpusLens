@@ -386,7 +386,8 @@ revealed a broader product problem: corpus cleaning needed to be inspectable
 and reproducible, not just executable.
 
 See [DECISIONS.md](DECISIONS.md) for the main product and engineering choices
-and [BENCHMARKS.md](BENCHMARKS.md) for a 100,000-record real-corpus run.
+and [BENCHMARKS.md](BENCHMARKS.md) for completed full-corpus Bengali and Nepali
+audits plus bounded near-deduplication runs on both languages.
 
 ## Current limitations
 
